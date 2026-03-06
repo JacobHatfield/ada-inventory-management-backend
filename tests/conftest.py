@@ -9,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 from app.core.security import hash_password
 from app.database import Base, get_db
 from app.main import app
+from app.models.inventory import InventoryItem
 from app.models.user import User
 
 # Use in-memory SQLite for testing
@@ -89,3 +90,50 @@ def auth_headers(client, test_user):
     )
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def test_inventory_item(db, test_user):
+    """Create a test inventory item for test_user."""
+    item = InventoryItem(
+        name="Test Widget",
+        description="A test inventory item",
+        quantity=100,
+        low_stock_threshold=10,
+        user_id=test_user.id,
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@pytest.fixture
+def other_user(db):
+    """Create another user for isolation testing."""
+    user = User(
+        email="otheruser@example.com",
+        hashed_password=hash_password("otherpassword123"),
+        full_name="Other User",
+        is_active=True,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@pytest.fixture
+def other_user_inventory_item(db, other_user):
+    """Create an inventory item for other_user (for authorization tests)."""
+    item = InventoryItem(
+        name="Other User's Item",
+        description="An item belonging to another user",
+        quantity=50,
+        low_stock_threshold=5,
+        user_id=other_user.id,
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
