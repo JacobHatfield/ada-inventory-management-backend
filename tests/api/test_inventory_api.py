@@ -1,5 +1,5 @@
 """Inventory API endpoint tests."""
-import pytest
+
 from fastapi import status
 
 
@@ -187,9 +187,7 @@ class TestGetInventoryItemById:
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert "not found" in response.json()["detail"].lower()
 
-    def test_get_item_wrong_user(
-        self, client, auth_headers, other_user_inventory_item
-    ):
+    def test_get_item_wrong_user(self, client, auth_headers, other_user_inventory_item):
         """Test user cannot access another user's item."""
         response = client.get(
             f"/api/v1/inventory/{other_user_inventory_item.id}", headers=auth_headers
@@ -294,15 +292,15 @@ class TestDeleteInventoryItem:
         """Test successful deletion of inventory item."""
         item_id = test_inventory_item.id
 
-        response = client.delete(
-            f"/api/v1/inventory/{item_id}", headers=auth_headers
-        )
+        response = client.delete(f"/api/v1/inventory/{item_id}", headers=auth_headers)
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
         # Verify item is removed from database
         from app.models.inventory import InventoryItem
 
-        deleted_item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+        deleted_item = (
+            db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+        )
         assert deleted_item is None
 
         # Verify subsequent GET returns 404

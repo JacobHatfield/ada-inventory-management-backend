@@ -3,13 +3,11 @@ Tests for exception handlers in inventory API endpoints.
 These tests mock the service layer to trigger exception handling in the API layer.
 """
 
-import pytest
 from unittest.mock import patch
+
 from fastapi import status
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
 
-from app.main import app
 from app.models.user import User
 
 

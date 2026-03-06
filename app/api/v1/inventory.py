@@ -1,4 +1,5 @@
 """Inventory management API routes."""
+
 from typing import Annotated, List
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -7,11 +8,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_current_active_user
 from app.models.user import User
-from app.schemas.inventory import (
-    InventoryItemCreate,
-    InventoryItemResponse,
-    InventoryItemUpdate,
-)
+from app.schemas.inventory import (InventoryItemCreate, InventoryItemResponse,
+                                   InventoryItemUpdate)
 from app.services import inventory_service
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])

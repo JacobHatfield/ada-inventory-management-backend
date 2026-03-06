@@ -1,7 +1,7 @@
 """Unit tests for inventory service layer."""
+
 import pytest
 
-from app.schemas.inventory import InventoryItemCreate, InventoryItemUpdate
 from app.services import inventory_service
 
 
@@ -10,6 +10,7 @@ class TestInventoryServiceValidation:
 
     def test_create_item_service_validates_negative_quantity(self, db, test_user):
         """Test that service layer catches negative quantity in create."""
+
         # Create a mock object that bypasses Pydantic validation
         # to test the service layer's defensive validation
         class MockItemData:
@@ -26,6 +27,7 @@ class TestInventoryServiceValidation:
         self, db, test_user, test_inventory_item
     ):
         """Test that service layer catches negative quantity in update."""
+
         # Create a mock object that bypasses Pydantic validation
         class MockUpdateData:
             quantity = -10  # Negative quantity
