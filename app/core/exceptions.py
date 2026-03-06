@@ -1,4 +1,5 @@
 """Custom exceptions and HTTP exception helpers."""
+
 from fastapi import HTTPException, status
 
 # Authentication exceptions

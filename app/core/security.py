@@ -1,8 +1,11 @@
 """Security utilities for password hashing and JWT token management."""
+
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+
 from app.core.config import settings
 from app.schemas.token import TokenPayload
 
@@ -28,16 +31,14 @@ def create_access_token(user_id: int, expires_delta: Optional[timedelta] = None)
         expire = datetime.now(timezone.utc) + timedelta(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
-    
+
     to_encode = {
         "sub": str(user_id),  # subject (user_id)
         "exp": expire,  # expiration time
     }
-    
+
     encoded_jwt = jwt.encode(
-        to_encode,
-        settings.SECRET_KEY,
-        algorithm=settings.ALGORITHM
+        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
     )
     return encoded_jwt
 
@@ -46,18 +47,13 @@ def decode_access_token(token: str) -> Optional[TokenPayload]:
     """Decode and validate a JWT access token."""
     try:
         payload = jwt.decode(
-            token,
-            settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
         user_id: Optional[int] = None
         if payload.get("sub"):
             user_id = int(payload.get("sub"))
-        
-        token_data = TokenPayload(
-            sub=user_id,
-            exp=payload.get("exp")
-        )
+
+        token_data = TokenPayload(sub=user_id, exp=payload.get("exp"))
         return token_data
     except JWTError:
         return None

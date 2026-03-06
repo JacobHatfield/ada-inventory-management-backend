@@ -1,11 +1,14 @@
 """Audit log schemas for tracking inventory changes."""
+
 from datetime import datetime
 from typing import Optional
+
 from pydantic import BaseModel, ConfigDict
 
 
 class AuditLogResponse(BaseModel):
     """Schema for audit log entries returned in responses."""
+
     id: int
     inventory_item_id: int
     user_id: int

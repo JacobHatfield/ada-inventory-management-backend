@@ -1,12 +1,16 @@
 """Inventory item schemas for request/response validation."""
+
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
 from app.schemas.category import CategoryResponse
 
 
 class InventoryItemBase(BaseModel):
     """Base inventory item schema with common fields."""
+
     name: str = Field(..., min_length=1, max_length=200)
     description: Optional[str] = None
     quantity: int = Field(..., ge=0, description="Quantity must be non-negative")
@@ -16,11 +20,13 @@ class InventoryItemBase(BaseModel):
 
 class InventoryItemCreate(InventoryItemBase):
     """Schema for creating a new inventory item."""
+
     pass
 
 
 class InventoryItemUpdate(BaseModel):
     """Schema for updating an inventory item."""
+
     name: Optional[str] = Field(None, min_length=1, max_length=200)
     description: Optional[str] = None
     quantity: Optional[int] = Field(None, ge=0)
@@ -30,9 +36,12 @@ class InventoryItemUpdate(BaseModel):
 
 class StockUpdate(BaseModel):
     """Schema for stock increment/decrement operations."""
-    quantity_change: int = Field(..., description="Positive to add, negative to subtract")
-    
-    @field_validator('quantity_change')
+
+    quantity_change: int = Field(
+        ..., description="Positive to add, negative to subtract"
+    )
+
+    @field_validator("quantity_change")
     @classmethod
     def validate_quantity_change(cls, v: int) -> int:
         if v == 0:
@@ -42,6 +51,7 @@ class StockUpdate(BaseModel):
 
 class InventoryItemResponse(InventoryItemBase):
     """Schema for inventory item data returned in responses."""
+
     id: int
     user_id: int
     is_low_stock: bool
