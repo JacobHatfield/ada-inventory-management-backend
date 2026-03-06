@@ -200,3 +200,88 @@ class TestGetInventoryItemById:
         """Test that authentication is required."""
         response = client.get(f"/api/v1/inventory/{test_inventory_item.id}")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+class TestUpdateInventoryItem:
+    """Test updating inventory items."""
+
+    def test_update_item_success(self, client, auth_headers, test_inventory_item, db):
+        """Test successful full update of inventory item."""
+        update_data = {
+            "name": "Updated Widget",
+            "description": "Updated description",
+            "quantity": 200,
+            "low_stock_threshold": 20,
+        }
+        response = client.put(
+            f"/api/v1/inventory/{test_inventory_item.id}",
+            json=update_data,
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["name"] == "Updated Widget"
+        assert data["description"] == "Updated description"
+        assert data["quantity"] == 200
+        assert data["low_stock_threshold"] == 20
+
+        # Verify changes persisted in database
+        db.refresh(test_inventory_item)
+        assert test_inventory_item.name == "Updated Widget"
+        assert test_inventory_item.quantity == 200
+
+    def test_update_item_partial(self, client, auth_headers, test_inventory_item, db):
+        """Test partial update (only some fields)."""
+        original_name = test_inventory_item.name
+        original_description = test_inventory_item.description
+
+        response = client.put(
+            f"/api/v1/inventory/{test_inventory_item.id}",
+            json={"quantity": 150},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["quantity"] == 150
+        # Other fields unchanged
+        assert data["name"] == original_name
+        assert data["description"] == original_description
+
+    def test_update_item_negative_quantity(
+        self, client, auth_headers, test_inventory_item
+    ):
+        """Test that negative quantity update is rejected."""
+        response = client.put(
+            f"/api/v1/inventory/{test_inventory_item.id}",
+            json={"quantity": -10},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_update_item_not_found(self, client, auth_headers):
+        """Test updating non-existent item returns 404."""
+        response = client.put(
+            "/api/v1/inventory/99999",
+            json={"name": "Does Not Exist"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_update_item_wrong_user(
+        self, client, auth_headers, other_user_inventory_item
+    ):
+        """Test user cannot update another user's item."""
+        response = client.put(
+            f"/api/v1/inventory/{other_user_inventory_item.id}",
+            json={"name": "Trying to Update"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_update_item_unauthenticated(self, client, test_inventory_item):
+        """Test that authentication is required."""
+        response = client.put(
+            f"/api/v1/inventory/{test_inventory_item.id}",
+            json={"name": "No Auth"},
+        )
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
