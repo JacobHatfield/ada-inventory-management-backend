@@ -1,14 +1,15 @@
 """Pytest configuration and fixtures for testing."""
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.core.security import hash_password
 from app.database import Base, get_db
 from app.main import app
 from app.models.user import User
-from app.core.security import hash_password
 
 # Use in-memory SQLite for testing
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -36,12 +37,13 @@ def db():
 @pytest.fixture(scope="function")
 def client(db):
     """Create a test client with database override."""
+
     def override_get_db():
         try:
             yield db
         finally:
             pass
-    
+
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:
         yield test_client

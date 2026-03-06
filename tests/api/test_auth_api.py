@@ -1,6 +1,7 @@
 """Authentication API endpoint tests."""
-import pytest
+
 from datetime import timedelta
+
 from fastapi import status
 from jose import jwt
 
@@ -227,12 +228,12 @@ class TestGetCurrentUser:
         """Test accessing endpoint when user is deactivated after getting token."""
         # Get a valid token while user is active
         token = create_access_token(test_user.id)
-        
+
         # Deactivate the user
         test_user.is_active = False
         db.commit()
         db.refresh(test_user)
-        
+
         # Try to access protected endpoint with valid token
         response = client.get(
             "/api/v1/auth/me",
@@ -246,11 +247,11 @@ class TestGetCurrentUser:
         """Test getting current user when user is deleted from DB returns 401."""
         # Create a valid token
         token = create_access_token(test_user.id)
-        
+
         # Delete the user from database
         db.query(User).filter(User.id == test_user.id).delete()
         db.commit()
-        
+
         # Try to use the token
         response = client.get(
             "/api/v1/auth/me",
@@ -276,8 +277,10 @@ class TestTokenExpiration:
         """Test creating a token with custom expiration time."""
         custom_expiration = timedelta(minutes=5)
         token = create_access_token(test_user.id, expires_delta=custom_expiration)
-        
+
         # Decode token to verify expiration
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
         assert "exp" in payload
         assert int(payload["sub"]) == test_user.id

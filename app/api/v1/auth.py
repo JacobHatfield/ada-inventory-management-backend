@@ -1,4 +1,5 @@
 """Authentication API routes."""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,7 +16,9 @@ from app.services.auth_service import authenticate_user, register_user
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+)
 def register(
     user_data: UserCreate,
     db: Annotated[Session, Depends(get_db)],
@@ -39,17 +42,17 @@ def login(
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Check if user is active
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Inactive user account",
         )
-    
+
     # Create access token
     access_token = create_access_token(user_id=user.id)
-    
+
     return Token(access_token=access_token, token_type="bearer")
 
 

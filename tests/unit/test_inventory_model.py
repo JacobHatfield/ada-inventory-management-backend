@@ -1,4 +1,5 @@
 """Unit tests for inventory model and schema."""
+
 import pytest
 from pydantic import ValidationError
 
