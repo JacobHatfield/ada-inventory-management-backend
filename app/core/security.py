@@ -11,43 +11,17 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
-    """
-    Hash a plain text password using bcrypt.
-    
-    Args:
-        password: Plain text password to hash
-        
-    Returns:
-        Hashed password string
-    """
+    """Hash a plain text password using bcrypt."""
     return pwd_context.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """
-    Verify a plain text password against a hashed password.
-    
-    Args:
-        plain_password: Plain text password to verify
-        hashed_password: Hashed password to compare against
-        
-    Returns:
-        True if password matches, False otherwise
-    """
+    """Verify a plain text password against a hashed password."""
     return pwd_context.verify(plain_password, hashed_password)
 
 
 def create_access_token(user_id: int, expires_delta: Optional[timedelta] = None) -> str:
-    """
-    Create a JWT access token for a user.
-    
-    Args:
-        user_id: ID of the user to create token for
-        expires_delta: Optional custom expiration time
-        
-    Returns:
-        Encoded JWT token string
-    """
+    """Create a JWT access token for a user."""
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
@@ -69,15 +43,7 @@ def create_access_token(user_id: int, expires_delta: Optional[timedelta] = None)
 
 
 def decode_access_token(token: str) -> Optional[TokenPayload]:
-    """
-    Decode and validate a JWT access token.
-    
-    Args:
-        token: JWT token string to decode
-        
-    Returns:
-        TokenPayload if valid, None if invalid
-    """
+    """Decode and validate a JWT access token."""
     try:
         payload = jwt.decode(
             token,
