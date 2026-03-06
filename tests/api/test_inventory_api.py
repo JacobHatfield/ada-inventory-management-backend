@@ -285,3 +285,45 @@ class TestUpdateInventoryItem:
             json={"name": "No Auth"},
         )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+class TestDeleteInventoryItem:
+    """Test deleting inventory items."""
+
+    def test_delete_item_success(self, client, auth_headers, test_inventory_item, db):
+        """Test successful deletion of inventory item."""
+        item_id = test_inventory_item.id
+
+        response = client.delete(
+            f"/api/v1/inventory/{item_id}", headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+
+        # Verify item is removed from database
+        from app.models.inventory import InventoryItem
+
+        deleted_item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+        assert deleted_item is None
+
+        # Verify subsequent GET returns 404
+        get_response = client.get(f"/api/v1/inventory/{item_id}", headers=auth_headers)
+        assert get_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_delete_item_not_found(self, client, auth_headers):
+        """Test deleting non-existent item returns 404."""
+        response = client.delete("/api/v1/inventory/99999", headers=auth_headers)
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_delete_item_wrong_user(
+        self, client, auth_headers, other_user_inventory_item
+    ):
+        """Test user cannot delete another user's item."""
+        response = client.delete(
+            f"/api/v1/inventory/{other_user_inventory_item.id}", headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_delete_item_unauthenticated(self, client, test_inventory_item):
+        """Test that authentication is required."""
+        response = client.delete(f"/api/v1/inventory/{test_inventory_item.id}")
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
