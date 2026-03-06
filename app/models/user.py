@@ -1,9 +1,4 @@
-"""
-User model
-- User table definition
-- Fields: id, email, hashed_password, full_name, is_active, created_at, updated_at
-- Relationships to inventory items
-"""
+"""User model for authentication and user management."""
 from sqlalchemy import Boolean, Column, Integer, String, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func

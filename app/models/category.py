@@ -1,9 +1,4 @@
-"""
-Category model
-- Category table definition
-- Fields: id, name, description, user_id, created_at, updated_at
-- Relationships to inventory items
-"""
+"""Category model for organizing inventory items."""
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func

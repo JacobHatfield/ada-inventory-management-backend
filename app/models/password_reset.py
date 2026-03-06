@@ -1,9 +1,4 @@
-"""
-Password Reset Token model
-- PasswordResetToken table definition
-- Fields: id, token, user_id, expires_at, is_used, created_at
-- Used for password reset functionality
-"""
+"""Password reset token model for secure password reset workflow."""
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
