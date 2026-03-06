@@ -16,7 +16,7 @@ class InventoryItem(Base):
     name = Column(String, nullable=False, index=True)
     description = Column(Text, nullable=True)
     quantity = Column(Integer, nullable=False, default=0)
-    low_stock_threshold = Column(Integer, nullable=True, default=10)
+    low_stock_threshold = Column(Integer, nullable=True)  # No default, truly optional
     category_id = Column(
         Integer,
         ForeignKey("categories.id", ondelete="SET NULL"),
