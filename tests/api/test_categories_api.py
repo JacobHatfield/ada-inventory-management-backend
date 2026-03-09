@@ -173,3 +173,54 @@ class TestGetCategoryById:
         assert response.status_code == status.HTTP_404_NOT_FOUND
         data = response.json()
         assert data["detail"] == "Category not found"
+
+
+class TestUpdateCategory:
+    """Test updating categories."""
+
+    def test_update_category_success(self, client, auth_headers, test_category):
+        """Test successful category update."""
+        response = client.put(
+            f"/api/v1/categories/{test_category.id}",
+            json={
+                "name": "Updated Electronics",
+                "description": "Updated description for electronics",
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["id"] == test_category.id
+        assert data["name"] == "Updated Electronics"
+        assert data["description"] == "Updated description for electronics"
+        assert "updated_at" in data
+
+    def test_update_category_not_found(self, client, auth_headers):
+        """Test updating a non-existent category returns 404."""
+        response = client.put(
+            "/api/v1/categories/99999",
+            json={
+                "name": "Won't Work",
+                "description": "This category doesn't exist",
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        data = response.json()
+        assert data["detail"] == "Category not found"
+
+    def test_update_category_not_owned(
+        self, client, auth_headers, other_user_category
+    ):
+        """Test user cannot update another user's category."""
+        response = client.put(
+            f"/api/v1/categories/{other_user_category.id}",
+            json={
+                "name": "Hacked Category",
+                "description": "Trying to hack another user's category",
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        data = response.json()
+        assert data["detail"] == "Category not found"
