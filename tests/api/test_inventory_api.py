@@ -472,3 +472,60 @@ class TestSearchInventory:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert len(data) == 8
+
+
+class TestFilterByStockStatus:
+    """Test filtering inventory items by stock status."""
+
+    def test_filter_low_stock_items(self, client, auth_headers, search_filter_items):
+        """Test filtering items with low stock (quantity > 0 but below threshold)."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"stock_status": "low_stock"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 2
+        names = [item["name"] for item in data]
+        assert "Blue Gadget" in names
+        assert "Yellow Device" in names
+
+    def test_filter_out_of_stock_items(self, client, auth_headers, search_filter_items):
+        """Test filtering items with zero quantity."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"stock_status": "out_of_stock"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 2
+        names = [item["name"] for item in data]
+        assert "Red Widget" in names
+        assert "Black Equipment" in names
+
+    def test_filter_in_stock_items(self, client, auth_headers, search_filter_items):
+        """Test filtering items with adequate stock (quantity >= threshold or > 0 with no threshold)."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"stock_status": "in_stock"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 4
+        names = [item["name"] for item in data]
+        assert "Green Tool" in names
+        assert "Purple Component" in names
+        assert "Orange Supply" in names
+        assert "Mini Widget" in names
+
+    def test_filter_invalid_stock_status(self, client, auth_headers, search_filter_items):
+        """Test that invalid stock status returns 422 validation error."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"stock_status": "invalid_status"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
