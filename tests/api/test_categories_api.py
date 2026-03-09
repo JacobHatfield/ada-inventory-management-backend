@@ -132,3 +132,44 @@ class TestGetCategories:
         assert all(cat["user_id"] == test_user.id for cat in data)
         # Verify none belong to other_user
         assert all(cat["user_id"] != other_user.id for cat in data)
+
+
+class TestGetCategoryById:
+    """Test getting a single category by ID."""
+
+    def test_get_category_by_id_success(self, client, auth_headers, test_category, test_user):
+        """Test successful retrieval of a category by ID."""
+        response = client.get(
+            f"/api/v1/categories/{test_category.id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["id"] == test_category.id
+        assert data["name"] == test_category.name
+        assert data["description"] == test_category.description
+        assert data["user_id"] == test_user.id
+        assert "created_at" in data
+        assert "updated_at" in data
+
+    def test_get_category_not_found(self, client, auth_headers):
+        """Test getting a non-existent category returns 404."""
+        response = client.get(
+            "/api/v1/categories/99999",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        data = response.json()
+        assert data["detail"] == "Category not found"
+
+    def test_get_category_not_owned(
+        self, client, auth_headers, other_user_category
+    ):
+        """Test user cannot access another user's category."""
+        response = client.get(
+            f"/api/v1/categories/{other_user_category.id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        data = response.json()
+        assert data["detail"] == "Category not found"
