@@ -529,3 +529,85 @@ class TestFilterByStockStatus:
             headers=auth_headers,
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+class TestSortInventory:
+    """Test sorting inventory items by various fields."""
+
+    def test_sort_by_name_ascending(self, client, auth_headers, search_filter_items):
+        """Test sorting items by name A-Z."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"sort_by": "name", "sort_order": "asc"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        names = [item["name"] for item in data]
+        assert names == sorted(names)
+        assert names[0] == "Black Equipment"
+        assert names[-1] == "Yellow Device"
+
+    def test_sort_by_name_descending(self, client, auth_headers, search_filter_items):
+        """Test sorting items by name Z-A."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"sort_by": "name", "sort_order": "desc"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        names = [item["name"] for item in data]
+        assert names == sorted(names, reverse=True)
+        assert names[0] == "Yellow Device"
+        assert names[-1] == "Black Equipment"
+
+    def test_sort_by_quantity_ascending(self, client, auth_headers, search_filter_items):
+        """Test sorting items by quantity (lowest first)."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"sort_by": "quantity", "sort_order": "asc"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        quantities = [item["quantity"] for item in data]
+        assert quantities == sorted(quantities)
+        assert quantities[0] == 0
+        assert quantities[-1] == 200
+
+    def test_sort_by_quantity_descending(self, client, auth_headers, search_filter_items):
+        """Test sorting items by quantity (highest first)."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"sort_by": "quantity", "sort_order": "desc"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        quantities = [item["quantity"] for item in data]
+        assert quantities == sorted(quantities, reverse=True)
+        assert quantities[0] == 200
+        assert quantities[-1] == 0
+
+    def test_sort_by_created_date(self, client, auth_headers, search_filter_items):
+        """Test sorting items by created_at (default: newest first)."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"sort_by": "created_at", "sort_order": "desc"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 8
+        created_dates = [item["created_at"] for item in data]
+        assert created_dates == sorted(created_dates, reverse=True)
+
+    def test_sort_invalid_field(self, client, auth_headers, search_filter_items):
+        """Test that invalid sort field returns 422 validation error."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"sort_by": "invalid_field", "sort_order": "asc"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
