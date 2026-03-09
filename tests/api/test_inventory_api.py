@@ -611,3 +611,77 @@ class TestSortInventory:
             headers=auth_headers,
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+class TestCombinedFiltersAndSearch:
+    """Test combining multiple filters, search, and sorting together."""
+
+    def test_search_and_category_filter(
+        self, client, auth_headers, search_filter_items, test_category
+    ):
+        """Test combining search with category filter."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"search": "widget", "category_id": test_category.id},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["name"] == "Red Widget"
+        assert data[0]["category_id"] == test_category.id
+
+    def test_search_and_stock_filter(self, client, auth_headers, search_filter_items):
+        """Test combining search with stock status filter."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"search": "widget", "stock_status": "out_of_stock"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["name"] == "Red Widget"
+        assert data[0]["quantity"] == 0
+
+    def test_all_filters_combined(
+        self, client, auth_headers, search_filter_items, test_category
+    ):
+        """Test combining search, category, stock status, and sorting."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={
+                "category_id": test_category.id,
+                "stock_status": "in_stock",
+                "sort_by": "quantity",
+                "sort_order": "desc",
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 2
+        assert data[0]["name"] == "Orange Supply"
+        assert data[0]["quantity"] == 200
+        assert data[1]["name"] == "Green Tool"
+        assert data[1]["quantity"] == 50
+
+    def test_pagination_with_filters(self, client, auth_headers, search_filter_items):
+        """Test that pagination works correctly with filters applied."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={
+                "sort_by": "name",
+                "sort_order": "asc",
+                "skip": 2,
+                "limit": 3,
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 3
+        names = [item["name"] for item in data]
+        assert names[0] == "Green Tool"
+        assert names[1] == "Mini Widget"
+        assert names[2] == "Orange Supply"
