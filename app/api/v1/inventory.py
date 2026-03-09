@@ -1,15 +1,18 @@
 """Inventory management API routes."""
 
-from typing import Annotated, List, Optional
+from typing import Annotated, List, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import get_current_active_user
 from app.models.user import User
-from app.schemas.inventory import (InventoryItemCreate, InventoryItemResponse,
-                                   InventoryItemUpdate)
+from app.schemas.inventory import (
+    InventoryItemCreate,
+    InventoryItemResponse,
+    InventoryItemUpdate,
+)
 from app.services import inventory_service
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
@@ -40,11 +43,27 @@ def get_inventory_items(
     current_user: Annotated[User, Depends(get_current_active_user)],
     skip: int = 0,
     limit: int = 100,
-    category_id: Optional[int] = None,
+    category_id: Optional[int] = Query(None, description="Filter by category ID"),
+    search: Optional[str] = Query(None, description="Search items by name (case-insensitive)"),
+    stock_status: Optional[Literal["out_of_stock", "low_stock", "in_stock"]] = Query(
+        None, description="Filter by stock status"
+    ),
+    sort_by: Literal["name", "quantity", "created_at", "updated_at"] = Query(
+        "created_at", description="Field to sort by"
+    ),
+    sort_order: Literal["asc", "desc"] = Query("desc", description="Sort order"),
 ):
-    """Get all inventory items for the authenticated user, optionally filtered by category."""
+    """Get all inventory items with optional search, filters, and sorting."""
     items = inventory_service.get_user_inventory_items(
-        db, current_user.id, skip, limit, category_id
+        db,
+        current_user.id,
+        skip,
+        limit,
+        category_id,
+        search,
+        stock_status,
+        sort_by,
+        sort_order,
     )
     return items
 
