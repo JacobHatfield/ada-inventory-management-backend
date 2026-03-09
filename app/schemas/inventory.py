@@ -37,9 +37,8 @@ class InventoryItemUpdate(BaseModel):
 class StockUpdate(BaseModel):
     """Schema for stock increment/decrement operations."""
 
-    quantity_change: int = Field(
-        ..., description="Positive to add, negative to subtract"
-    )
+    quantity_change: int = Field(..., gt=0, description="Amount to add/remove (must be positive)")
+    reason: Optional[str] = Field(None, max_length=200, description="Optional reason for stock change")
 
     @field_validator("quantity_change")
     @classmethod
