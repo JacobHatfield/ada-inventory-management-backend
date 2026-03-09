@@ -161,6 +161,101 @@ class TestGetInventoryItems:
         assert all(item["user_id"] == test_user.id for item in data)
         assert all("Test User Item" in item["name"] for item in data)
 
+    def test_filter_items_by_category(
+        self, client, auth_headers, db, test_user
+    ):
+        """Test filtering inventory items by category."""
+        from app.models.category import Category
+        from app.models.inventory import InventoryItem
+
+        # Create two categories
+        category1 = Category(
+            name="Electronics", description="Electronic items", user_id=test_user.id
+        )
+        category2 = Category(
+            name="Books", description="Book items", user_id=test_user.id
+        )
+        db.add(category1)
+        db.add(category2)
+        db.commit()
+        db.refresh(category1)
+        db.refresh(category2)
+
+        # Create items in different categories
+        for i in range(3):
+            item = InventoryItem(
+                name=f"Electronics Item {i}",
+                quantity=10,
+                category_id=category1.id,
+                user_id=test_user.id,
+            )
+            db.add(item)
+
+        for i in range(2):
+            item = InventoryItem(
+                name=f"Book Item {i}",
+                quantity=5,
+                category_id=category2.id,
+                user_id=test_user.id,
+            )
+            db.add(item)
+
+        # Create item without category
+        item = InventoryItem(
+            name="Uncategorized Item",
+            quantity=15,
+            user_id=test_user.id,
+        )
+        db.add(item)
+        db.commit()
+
+        # Filter by category1 (Electronics)
+        response = client.get(
+            f"/api/v1/inventory/?category_id={category1.id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 3
+        assert all(item["category_id"] == category1.id for item in data)
+        assert all("Electronics Item" in item["name"] for item in data)
+
+        # Filter by category2 (Books)
+        response = client.get(
+            f"/api/v1/inventory/?category_id={category2.id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 2
+        assert all(item["category_id"] == category2.id for item in data)
+        assert all("Book Item" in item["name"] for item in data)
+
+    def test_filter_items_by_nonexistent_category(
+        self, client, auth_headers, db, test_user
+    ):
+        """Test filtering by non-existent category returns empty list."""
+        from app.models.inventory import InventoryItem
+
+        # Create some items
+        for i in range(2):
+            item = InventoryItem(
+                name=f"Test Item {i}",
+                quantity=10,
+                user_id=test_user.id,
+            )
+            db.add(item)
+        db.commit()
+
+        # Filter by non-existent category ID
+        response = client.get(
+            "/api/v1/inventory/?category_id=99999",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data == []
+
     def test_get_items_unauthenticated(self, client):
         """Test that authentication is required."""
         response = client.get("/api/v1/inventory/")

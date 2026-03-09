@@ -9,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 from app.core.security import hash_password
 from app.database import Base, get_db
 from app.main import app
+from app.models.category import Category
 from app.models.inventory import InventoryItem
 from app.models.user import User
 
@@ -137,3 +138,31 @@ def other_user_inventory_item(db, other_user):
     db.commit()
     db.refresh(item)
     return item
+
+
+@pytest.fixture
+def test_category(db, test_user):
+    """Create a test category for test_user."""
+    category = Category(
+        name="Test Category",
+        description="A test category",
+        user_id=test_user.id,
+    )
+    db.add(category)
+    db.commit()
+    db.refresh(category)
+    return category
+
+
+@pytest.fixture
+def other_user_category(db, other_user):
+    """Create a category for other_user (for authorization tests)."""
+    category = Category(
+        name="Other User's Category",
+        description="A category belonging to another user",
+        user_id=other_user.id,
+    )
+    db.add(category)
+    db.commit()
+    db.refresh(category)
+    return category

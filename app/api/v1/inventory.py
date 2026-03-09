@@ -1,6 +1,6 @@
 """Inventory management API routes."""
 
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -40,9 +40,12 @@ def get_inventory_items(
     current_user: Annotated[User, Depends(get_current_active_user)],
     skip: int = 0,
     limit: int = 100,
+    category_id: Optional[int] = None,
 ):
-    """Get all inventory items for the authenticated user."""
-    items = inventory_service.get_user_inventory_items(db, current_user.id, skip, limit)
+    """Get all inventory items for the authenticated user, optionally filtered by category."""
+    items = inventory_service.get_user_inventory_items(
+        db, current_user.id, skip, limit, category_id
+    )
     return items
 
 
