@@ -420,3 +420,55 @@ class TestDeleteInventoryItem:
         """Test that authentication is required."""
         response = client.delete(f"/api/v1/inventory/{test_inventory_item.id}")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+class TestSearchInventory:
+    """Test search functionality for inventory items."""
+
+    def test_search_by_name_exact_match(self, client, auth_headers, search_filter_items):
+        """Test searching with exact name match."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"search": "Red Widget"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["name"] == "Red Widget"
+
+    def test_search_by_name_partial_match(self, client, auth_headers, search_filter_items):
+        """Test searching with partial name match (case-insensitive)."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"search": "widget"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 2
+        names = [item["name"] for item in data]
+        assert "Red Widget" in names
+        assert "Mini Widget" in names
+
+    def test_search_no_results(self, client, auth_headers, search_filter_items):
+        """Test searching for non-existent item returns empty list."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"search": "NonExistentItem"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 0
+
+    def test_search_empty_string(self, client, auth_headers, search_filter_items):
+        """Test searching with empty string returns all items."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"search": ""},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 8
