@@ -2,6 +2,7 @@
 
 from typing import List, Optional
 
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from app.models.inventory import InventoryItem
@@ -33,16 +34,60 @@ def create_inventory_item(
 
 
 def get_user_inventory_items(
-    db: Session, user_id: int, skip: int = 0, limit: int = 100, category_id: Optional[int] = None
+    db: Session,
+    user_id: int,
+    skip: int = 0,
+    limit: int = 100,
+    category_id: Optional[int] = None,
+    search: Optional[str] = None,
+    stock_status: Optional[str] = None,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
 ) -> List[InventoryItem]:
-    """Get all inventory items for a specific user, optionally filtered by category."""
+    """Get all inventory items for a user with optional search, filters, and sorting."""
     # Build base query filtered by user
     query = db.query(InventoryItem).filter(InventoryItem.user_id == user_id)
-    
+
     # Add category filter if provided
     if category_id is not None:
         query = query.filter(InventoryItem.category_id == category_id)
-    
+
+    # Add search filter if provided (case-insensitive name search)
+    if search:
+        query = query.filter(InventoryItem.name.ilike(f"%{search}%"))
+
+    # Add stock status filter if provided
+    if stock_status:
+        if stock_status == "out_of_stock":
+            # Items with zero quantity
+            query = query.filter(InventoryItem.quantity == 0)
+        elif stock_status == "low_stock":
+            # Items with quantity > 0 but below threshold
+            query = query.filter(
+                and_(
+                    InventoryItem.quantity > 0,
+                    InventoryItem.quantity < InventoryItem.low_stock_threshold,
+                )
+            )
+        elif stock_status == "in_stock":
+            # Items with quantity at or above threshold (or > 0 if no threshold)
+            query = query.filter(
+                or_(
+                    InventoryItem.quantity >= InventoryItem.low_stock_threshold,
+                    and_(
+                        InventoryItem.quantity > 0,
+                        InventoryItem.low_stock_threshold.is_(None),
+                    ),
+                )
+            )
+
+    # Apply sorting
+    sort_column = getattr(InventoryItem, sort_by, InventoryItem.created_at)
+    if sort_order == "asc":
+        query = query.order_by(sort_column.asc())
+    else:
+        query = query.order_by(sort_column.desc())
+
     # Apply pagination and return
     return query.offset(skip).limit(limit).all()
 
