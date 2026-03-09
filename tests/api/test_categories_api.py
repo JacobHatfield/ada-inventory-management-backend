@@ -58,3 +58,77 @@ class TestCreateCategory:
             headers=auth_headers,
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+class TestGetCategories:
+    """Test listing categories."""
+
+    def test_get_categories_success(self, client, auth_headers, db, test_user):
+        """Test successful retrieval of category list."""
+        # Create 3 categories for test_user
+        from app.models.category import Category
+
+        categories = [
+            Category(
+                name=f"Category {chr(65 + i)}",  # A, B, C
+                description=f"Description {i}",
+                user_id=test_user.id,
+            )
+            for i in range(3)
+        ]
+        for cat in categories:
+            db.add(cat)
+        db.commit()
+
+        response = client.get("/api/v1/categories/", headers=auth_headers)
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) == 3
+        assert all(cat["user_id"] == test_user.id for cat in data)
+        # Verify ordered by name (alphabetically)
+        assert data[0]["name"] == "Category A"
+        assert data[1]["name"] == "Category B"
+        assert data[2]["name"] == "Category C"
+
+    def test_get_categories_empty_list(self, client, auth_headers):
+        """Test retrieving empty category list."""
+        response = client.get("/api/v1/categories/", headers=auth_headers)
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data == []
+
+    def test_get_categories_only_own_categories(
+        self, client, auth_headers, db, test_user, other_user
+    ):
+        """Test user can only see their own categories."""
+        from app.models.category import Category
+
+        # Create 2 categories for test_user
+        for i in range(2):
+            cat = Category(
+                name=f"Test User Category {i}",
+                description=f"Test user's category {i}",
+                user_id=test_user.id,
+            )
+            db.add(cat)
+
+        # Create 2 categories for other_user
+        for i in range(2):
+            cat = Category(
+                name=f"Other User Category {i}",
+                description=f"Other user's category {i}",
+                user_id=other_user.id,
+            )
+            db.add(cat)
+        db.commit()
+
+        # Request with test_user's auth
+        response = client.get("/api/v1/categories/", headers=auth_headers)
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 2
+        # Verify all categories belong to test_user
+        assert all(cat["user_id"] == test_user.id for cat in data)
+        # Verify none belong to other_user
+        assert all(cat["user_id"] != other_user.id for cat in data)
