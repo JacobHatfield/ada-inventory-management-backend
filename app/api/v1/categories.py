@@ -3,7 +3,6 @@
 from typing import Annotated, List
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -90,8 +89,8 @@ def delete_category(
                 detail="Category not found",
             )
         return None
-    except IntegrityError:
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete category with existing inventory items. Please reassign or delete items first.",
+            detail=str(e),
         )

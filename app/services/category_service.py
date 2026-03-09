@@ -5,6 +5,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from app.models.category import Category
+from app.models.inventory import InventoryItem
 from app.schemas.category import CategoryCreate, CategoryUpdate
 
 
@@ -72,13 +73,30 @@ def update_category(
 
 
 def delete_category(db: Session, category_id: int, user_id: int) -> bool:
-    """ Delete a category, verifying ownership."""
+    """
+    Delete a category, verifying ownership.
+    
+    Raises ValueError if category has associated inventory items.
+    """
     # Get category with ownership check
     db_category = get_category_by_id(db, category_id, user_id)
     if not db_category:
         return False
 
-    # Delete category (will raise exception if items exist)
+    # Check if category has any inventory items
+    item_count = (
+        db.query(InventoryItem)
+        .filter(InventoryItem.category_id == category_id)
+        .count()
+    )
+    
+    if item_count > 0:
+        raise ValueError(
+            "Cannot delete category with existing inventory items. "
+            "Please reassign or delete items first."
+        )
+
+    # Delete category
     db.delete(db_category)
     db.commit()
     return True

@@ -224,3 +224,84 @@ class TestUpdateCategory:
         assert response.status_code == status.HTTP_404_NOT_FOUND
         data = response.json()
         assert data["detail"] == "Category not found"
+
+
+class TestDeleteCategory:
+    """Test deleting categories."""
+
+    def test_delete_category_success(self, client, auth_headers, test_category):
+        """Test successful category deletion."""
+        category_id = test_category.id
+
+        # Delete the category
+        response = client.delete(
+            f"/api/v1/categories/{category_id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+
+        # Verify category is deleted (GET should return 404)
+        verify_response = client.get(
+            f"/api/v1/categories/{category_id}",
+            headers=auth_headers,
+        )
+        assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_delete_category_not_found(self, client, auth_headers):
+        """Test deleting a non-existent category returns 404."""
+        response = client.delete(
+            "/api/v1/categories/99999",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        data = response.json()
+        assert data["detail"] == "Category not found"
+
+    def test_delete_category_not_owned(
+        self, client, auth_headers, other_user_category
+    ):
+        """Test user cannot delete another user's category."""
+        response = client.delete(
+            f"/api/v1/categories/{other_user_category.id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        data = response.json()
+        assert data["detail"] == "Category not found"
+
+    def test_delete_category_with_items(
+        self, client, auth_headers, db, test_user
+    ):
+        """Test that category with items cannot be deleted."""
+        from app.models.category import Category
+        from app.models.inventory import InventoryItem
+
+        # Create a category
+        category = Category(
+            name="Category with Items",
+            description="This category has inventory items",
+            user_id=test_user.id,
+        )
+        db.add(category)
+        db.commit()
+        db.refresh(category)
+
+        # Create an inventory item in this category
+        item = InventoryItem(
+            name="Test Item",
+            description="Item in category",
+            quantity=10,
+            category_id=category.id,
+            user_id=test_user.id,
+        )
+        db.add(item)
+        db.commit()
+
+        # Try to delete the category (should fail)
+        response = client.delete(
+            f"/api/v1/categories/{category.id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        data = response.json()
+        assert "Cannot delete category with existing inventory items" in data["detail"]
