@@ -33,17 +33,18 @@ def create_inventory_item(
 
 
 def get_user_inventory_items(
-    db: Session, user_id: int, skip: int = 0, limit: int = 100
+    db: Session, user_id: int, skip: int = 0, limit: int = 100, category_id: Optional[int] = None
 ) -> List[InventoryItem]:
-    """Get all inventory items for a specific user."""
-    # Query items filtered by user, include category relationship
-    return (
-        db.query(InventoryItem)
-        .filter(InventoryItem.user_id == user_id)
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
+    """Get all inventory items for a specific user, optionally filtered by category."""
+    # Build base query filtered by user
+    query = db.query(InventoryItem).filter(InventoryItem.user_id == user_id)
+    
+    # Add category filter if provided
+    if category_id is not None:
+        query = query.filter(InventoryItem.category_id == category_id)
+    
+    # Apply pagination and return
+    return query.offset(skip).limit(limit).all()
 
 
 def get_inventory_item_by_id(
