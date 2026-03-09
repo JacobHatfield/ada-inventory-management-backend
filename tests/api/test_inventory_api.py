@@ -161,9 +161,7 @@ class TestGetInventoryItems:
         assert all(item["user_id"] == test_user.id for item in data)
         assert all("Test User Item" in item["name"] for item in data)
 
-    def test_filter_items_by_category(
-        self, client, auth_headers, db, test_user
-    ):
+    def test_filter_items_by_category(self, client, auth_headers, db, test_user):
         """Test filtering inventory items by category."""
         from app.models.category import Category
         from app.models.inventory import InventoryItem
@@ -420,3 +418,278 @@ class TestDeleteInventoryItem:
         """Test that authentication is required."""
         response = client.delete(f"/api/v1/inventory/{test_inventory_item.id}")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+class TestSearchInventory:
+    """Test search functionality for inventory items."""
+
+    def test_search_by_name_exact_match(
+        self, client, auth_headers, search_filter_items
+    ):
+        """Test searching with exact name match."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"search": "Red Widget"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["name"] == "Red Widget"
+
+    def test_search_by_name_partial_match(
+        self, client, auth_headers, search_filter_items
+    ):
+        """Test searching with partial name match (case-insensitive)."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"search": "widget"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 2
+        names = [item["name"] for item in data]
+        assert "Red Widget" in names
+        assert "Mini Widget" in names
+
+    def test_search_no_results(self, client, auth_headers, search_filter_items):
+        """Test searching for non-existent item returns empty list."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"search": "NonExistentItem"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 0
+
+    def test_search_empty_string(self, client, auth_headers, search_filter_items):
+        """Test searching with empty string returns all items."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"search": ""},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 8
+
+
+class TestFilterByStockStatus:
+    """Test filtering inventory items by stock status."""
+
+    def test_filter_low_stock_items(self, client, auth_headers, search_filter_items):
+        """Test filtering items with low stock (quantity > 0 but below threshold)."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"stock_status": "low_stock"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 2
+        names = [item["name"] for item in data]
+        assert "Blue Gadget" in names
+        assert "Yellow Device" in names
+
+    def test_filter_out_of_stock_items(self, client, auth_headers, search_filter_items):
+        """Test filtering items with zero quantity."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"stock_status": "out_of_stock"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 2
+        names = [item["name"] for item in data]
+        assert "Red Widget" in names
+        assert "Black Equipment" in names
+
+    def test_filter_in_stock_items(self, client, auth_headers, search_filter_items):
+        """Test filtering items with adequate stock (quantity >= threshold or > 0 with no threshold)."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"stock_status": "in_stock"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 4
+        names = [item["name"] for item in data]
+        assert "Green Tool" in names
+        assert "Purple Component" in names
+        assert "Orange Supply" in names
+        assert "Mini Widget" in names
+
+    def test_filter_invalid_stock_status(
+        self, client, auth_headers, search_filter_items
+    ):
+        """Test that invalid stock status returns 422 validation error."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"stock_status": "invalid_status"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+class TestSortInventory:
+    """Test sorting inventory items by various fields."""
+
+    def test_sort_by_name_ascending(self, client, auth_headers, search_filter_items):
+        """Test sorting items by name A-Z."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"sort_by": "name", "sort_order": "asc"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        names = [item["name"] for item in data]
+        assert names == sorted(names)
+        assert names[0] == "Black Equipment"
+        assert names[-1] == "Yellow Device"
+
+    def test_sort_by_name_descending(self, client, auth_headers, search_filter_items):
+        """Test sorting items by name Z-A."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"sort_by": "name", "sort_order": "desc"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        names = [item["name"] for item in data]
+        assert names == sorted(names, reverse=True)
+        assert names[0] == "Yellow Device"
+        assert names[-1] == "Black Equipment"
+
+    def test_sort_by_quantity_ascending(
+        self, client, auth_headers, search_filter_items
+    ):
+        """Test sorting items by quantity (lowest first)."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"sort_by": "quantity", "sort_order": "asc"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        quantities = [item["quantity"] for item in data]
+        assert quantities == sorted(quantities)
+        assert quantities[0] == 0
+        assert quantities[-1] == 200
+
+    def test_sort_by_quantity_descending(
+        self, client, auth_headers, search_filter_items
+    ):
+        """Test sorting items by quantity (highest first)."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"sort_by": "quantity", "sort_order": "desc"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        quantities = [item["quantity"] for item in data]
+        assert quantities == sorted(quantities, reverse=True)
+        assert quantities[0] == 200
+        assert quantities[-1] == 0
+
+    def test_sort_by_created_date(self, client, auth_headers, search_filter_items):
+        """Test sorting items by created_at (default: newest first)."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"sort_by": "created_at", "sort_order": "desc"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 8
+        created_dates = [item["created_at"] for item in data]
+        assert created_dates == sorted(created_dates, reverse=True)
+
+    def test_sort_invalid_field(self, client, auth_headers, search_filter_items):
+        """Test that invalid sort field returns 422 validation error."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"sort_by": "invalid_field", "sort_order": "asc"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+class TestCombinedFiltersAndSearch:
+    """Test combining multiple filters, search, and sorting together."""
+
+    def test_search_and_category_filter(
+        self, client, auth_headers, search_filter_items, test_category
+    ):
+        """Test combining search with category filter."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"search": "widget", "category_id": test_category.id},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["name"] == "Red Widget"
+        assert data[0]["category_id"] == test_category.id
+
+    def test_search_and_stock_filter(self, client, auth_headers, search_filter_items):
+        """Test combining search with stock status filter."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={"search": "widget", "stock_status": "out_of_stock"},
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["name"] == "Red Widget"
+        assert data[0]["quantity"] == 0
+
+    def test_all_filters_combined(
+        self, client, auth_headers, search_filter_items, test_category
+    ):
+        """Test combining search, category, stock status, and sorting."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={
+                "category_id": test_category.id,
+                "stock_status": "in_stock",
+                "sort_by": "quantity",
+                "sort_order": "desc",
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 2
+        assert data[0]["name"] == "Orange Supply"
+        assert data[0]["quantity"] == 200
+        assert data[1]["name"] == "Green Tool"
+        assert data[1]["quantity"] == 50
+
+    def test_pagination_with_filters(self, client, auth_headers, search_filter_items):
+        """Test that pagination works correctly with filters applied."""
+        response = client.get(
+            "/api/v1/inventory/",
+            params={
+                "sort_by": "name",
+                "sort_order": "asc",
+                "skip": 2,
+                "limit": 3,
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 3
+        names = [item["name"] for item in data]
+        assert names[0] == "Green Tool"
+        assert names[1] == "Mini Widget"
+        assert names[2] == "Orange Supply"

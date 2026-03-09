@@ -166,3 +166,104 @@ def other_user_category(db, other_user):
     db.commit()
     db.refresh(category)
     return category
+
+
+@pytest.fixture
+def search_filter_items(db, test_user, test_category):
+    """Create multiple inventory items for search and filter testing."""
+    items = []
+
+    # Item 1: Out of stock
+    item1 = InventoryItem(
+        name="Red Widget",
+        description="Out of stock item",
+        quantity=0,
+        low_stock_threshold=10,
+        user_id=test_user.id,
+        category_id=test_category.id,
+    )
+    items.append(item1)
+
+    # Item 2: Low stock
+    item2 = InventoryItem(
+        name="Blue Gadget",
+        description="Low stock item",
+        quantity=5,
+        low_stock_threshold=10,
+        user_id=test_user.id,
+        category_id=test_category.id,
+    )
+    items.append(item2)
+
+    # Item 3: In stock
+    item3 = InventoryItem(
+        name="Green Tool",
+        description="In stock item",
+        quantity=50,
+        low_stock_threshold=10,
+        user_id=test_user.id,
+        category_id=test_category.id,
+    )
+    items.append(item3)
+
+    # Item 4: No category, low stock
+    item4 = InventoryItem(
+        name="Yellow Device",
+        description="Item without category",
+        quantity=3,
+        low_stock_threshold=10,
+        user_id=test_user.id,
+        category_id=None,
+    )
+    items.append(item4)
+
+    # Item 5: No threshold set, has stock
+    item5 = InventoryItem(
+        name="Purple Component",
+        description="No threshold",
+        quantity=25,
+        low_stock_threshold=None,
+        user_id=test_user.id,
+        category_id=None,
+    )
+    items.append(item5)
+
+    # Item 6: High quantity for sorting
+    item6 = InventoryItem(
+        name="Orange Supply",
+        description="High quantity item",
+        quantity=200,
+        low_stock_threshold=20,
+        user_id=test_user.id,
+        category_id=test_category.id,
+    )
+    items.append(item6)
+
+    # Item 7: Another out of stock item
+    item7 = InventoryItem(
+        name="Black Equipment",
+        description="Out of stock",
+        quantity=0,
+        low_stock_threshold=5,
+        user_id=test_user.id,
+        category_id=None,
+    )
+    items.append(item7)
+
+    # Item 8: For search testing - contains "widget"
+    item8 = InventoryItem(
+        name="Mini Widget",
+        description="Small widget for testing search",
+        quantity=15,
+        low_stock_threshold=5,
+        user_id=test_user.id,
+        category_id=None,
+    )
+    items.append(item8)
+
+    db.add_all(items)
+    db.commit()
+    for item in items:
+        db.refresh(item)
+
+    return items
