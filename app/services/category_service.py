@@ -75,7 +75,7 @@ def update_category(
 def delete_category(db: Session, category_id: int, user_id: int) -> bool:
     """
     Delete a category, verifying ownership.
-    
+
     Raises ValueError if category has associated inventory items.
     """
     # Get category with ownership check
@@ -85,11 +85,9 @@ def delete_category(db: Session, category_id: int, user_id: int) -> bool:
 
     # Check if category has any inventory items
     item_count = (
-        db.query(InventoryItem)
-        .filter(InventoryItem.category_id == category_id)
-        .count()
+        db.query(InventoryItem).filter(InventoryItem.category_id == category_id).count()
     )
-    
+
     if item_count > 0:
         raise ValueError(
             "Cannot delete category with existing inventory items. "

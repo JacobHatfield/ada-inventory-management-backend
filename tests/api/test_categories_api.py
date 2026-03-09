@@ -137,7 +137,9 @@ class TestGetCategories:
 class TestGetCategoryById:
     """Test getting a single category by ID."""
 
-    def test_get_category_by_id_success(self, client, auth_headers, test_category, test_user):
+    def test_get_category_by_id_success(
+        self, client, auth_headers, test_category, test_user
+    ):
         """Test successful retrieval of a category by ID."""
         response = client.get(
             f"/api/v1/categories/{test_category.id}",
@@ -162,9 +164,7 @@ class TestGetCategoryById:
         data = response.json()
         assert data["detail"] == "Category not found"
 
-    def test_get_category_not_owned(
-        self, client, auth_headers, other_user_category
-    ):
+    def test_get_category_not_owned(self, client, auth_headers, other_user_category):
         """Test user cannot access another user's category."""
         response = client.get(
             f"/api/v1/categories/{other_user_category.id}",
@@ -209,9 +209,7 @@ class TestUpdateCategory:
         data = response.json()
         assert data["detail"] == "Category not found"
 
-    def test_update_category_not_owned(
-        self, client, auth_headers, other_user_category
-    ):
+    def test_update_category_not_owned(self, client, auth_headers, other_user_category):
         """Test user cannot update another user's category."""
         response = client.put(
             f"/api/v1/categories/{other_user_category.id}",
@@ -257,9 +255,7 @@ class TestDeleteCategory:
         data = response.json()
         assert data["detail"] == "Category not found"
 
-    def test_delete_category_not_owned(
-        self, client, auth_headers, other_user_category
-    ):
+    def test_delete_category_not_owned(self, client, auth_headers, other_user_category):
         """Test user cannot delete another user's category."""
         response = client.delete(
             f"/api/v1/categories/{other_user_category.id}",
@@ -269,9 +265,7 @@ class TestDeleteCategory:
         data = response.json()
         assert data["detail"] == "Category not found"
 
-    def test_delete_category_with_items(
-        self, client, auth_headers, db, test_user
-    ):
+    def test_delete_category_with_items(self, client, auth_headers, db, test_user):
         """Test that category with items cannot be deleted."""
         from app.models.category import Category
         from app.models.inventory import InventoryItem

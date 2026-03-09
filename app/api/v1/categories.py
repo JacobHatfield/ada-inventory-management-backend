@@ -14,9 +14,7 @@ from app.services import category_service
 router = APIRouter(prefix="/categories", tags=["categories"])
 
 
-@router.post(
-    "/", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED
-)
+@router.post("/", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED)
 def create_category(
     category_data: CategoryCreate,
     db: Annotated[Session, Depends(get_db)],
