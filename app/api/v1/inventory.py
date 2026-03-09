@@ -44,7 +44,9 @@ def get_inventory_items(
     skip: int = 0,
     limit: int = 100,
     category_id: Optional[int] = Query(None, description="Filter by category ID"),
-    search: Optional[str] = Query(None, description="Search items by name (case-insensitive)"),
+    search: Optional[str] = Query(
+        None, description="Search items by name (case-insensitive)"
+    ),
     stock_status: Optional[Literal["out_of_stock", "low_stock", "in_stock"]] = Query(
         None, description="Filter by stock status"
     ),

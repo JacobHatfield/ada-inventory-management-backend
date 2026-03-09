@@ -161,9 +161,7 @@ class TestGetInventoryItems:
         assert all(item["user_id"] == test_user.id for item in data)
         assert all("Test User Item" in item["name"] for item in data)
 
-    def test_filter_items_by_category(
-        self, client, auth_headers, db, test_user
-    ):
+    def test_filter_items_by_category(self, client, auth_headers, db, test_user):
         """Test filtering inventory items by category."""
         from app.models.category import Category
         from app.models.inventory import InventoryItem
@@ -425,7 +423,9 @@ class TestDeleteInventoryItem:
 class TestSearchInventory:
     """Test search functionality for inventory items."""
 
-    def test_search_by_name_exact_match(self, client, auth_headers, search_filter_items):
+    def test_search_by_name_exact_match(
+        self, client, auth_headers, search_filter_items
+    ):
         """Test searching with exact name match."""
         response = client.get(
             "/api/v1/inventory/",
@@ -437,7 +437,9 @@ class TestSearchInventory:
         assert len(data) == 1
         assert data[0]["name"] == "Red Widget"
 
-    def test_search_by_name_partial_match(self, client, auth_headers, search_filter_items):
+    def test_search_by_name_partial_match(
+        self, client, auth_headers, search_filter_items
+    ):
         """Test searching with partial name match (case-insensitive)."""
         response = client.get(
             "/api/v1/inventory/",
@@ -521,7 +523,9 @@ class TestFilterByStockStatus:
         assert "Orange Supply" in names
         assert "Mini Widget" in names
 
-    def test_filter_invalid_stock_status(self, client, auth_headers, search_filter_items):
+    def test_filter_invalid_stock_status(
+        self, client, auth_headers, search_filter_items
+    ):
         """Test that invalid stock status returns 422 validation error."""
         response = client.get(
             "/api/v1/inventory/",
@@ -562,7 +566,9 @@ class TestSortInventory:
         assert names[0] == "Yellow Device"
         assert names[-1] == "Black Equipment"
 
-    def test_sort_by_quantity_ascending(self, client, auth_headers, search_filter_items):
+    def test_sort_by_quantity_ascending(
+        self, client, auth_headers, search_filter_items
+    ):
         """Test sorting items by quantity (lowest first)."""
         response = client.get(
             "/api/v1/inventory/",
@@ -576,7 +582,9 @@ class TestSortInventory:
         assert quantities[0] == 0
         assert quantities[-1] == 200
 
-    def test_sort_by_quantity_descending(self, client, auth_headers, search_filter_items):
+    def test_sort_by_quantity_descending(
+        self, client, auth_headers, search_filter_items
+    ):
         """Test sorting items by quantity (highest first)."""
         response = client.get(
             "/api/v1/inventory/",
