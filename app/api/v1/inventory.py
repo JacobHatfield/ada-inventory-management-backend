@@ -137,7 +137,7 @@ def increment_stock(
 ):
     """
     Increment stock quantity for an inventory item.
-    
+
     Add a specified amount to the current stock quantity.
     Optionally provide a reason for the stock change for audit purposes.
     """
@@ -171,7 +171,7 @@ def decrement_stock(
 ):
     """
     Decrement stock quantity for an inventory item.
-    
+
     Remove a specified amount from the current stock quantity.
     Prevents negative stock - returns 400 error if operation would result in negative quantity.
     Optionally provide a reason for the stock change for audit purposes.

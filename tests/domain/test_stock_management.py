@@ -1,11 +1,12 @@
-
 from app.services import inventory_service
 
 
 class TestStockIncrement:
     """Test stock increment business logic."""
 
-    def test_increment_stock_increases_quantity(self, db, test_user, test_inventory_item):
+    def test_increment_stock_increases_quantity(
+        self, db, test_user, test_inventory_item
+    ):
         """Test that incrementing stock increases the quantity correctly."""
         original_quantity = test_inventory_item.quantity
         increment_amount = 25
@@ -58,7 +59,9 @@ class TestStockIncrement:
 class TestStockDecrement:
     """Test stock decrement business logic."""
 
-    def test_decrement_stock_decreases_quantity(self, db, test_user, test_inventory_item):
+    def test_decrement_stock_decreases_quantity(
+        self, db, test_user, test_inventory_item
+    ):
         """Test that decrementing stock decreases the quantity correctly."""
         test_inventory_item.quantity = 50
         db.commit()
@@ -122,6 +125,7 @@ class TestNegativeStockPrevention:
         db.commit()
 
         import pytest
+
         with pytest.raises(ValueError, match="negative stock"):
             inventory_service.adjust_stock_quantity(
                 db=db,
@@ -140,6 +144,7 @@ class TestNegativeStockPrevention:
         db.commit()
 
         import pytest
+
         with pytest.raises(ValueError, match="negative stock"):
             inventory_service.adjust_stock_quantity(
                 db, test_inventory_item.id, -11, test_user.id
@@ -154,6 +159,7 @@ class TestNegativeStockPrevention:
         db.commit()
 
         import pytest
+
         with pytest.raises(ValueError, match="negative stock"):
             inventory_service.adjust_stock_quantity(
                 db, test_inventory_item.id, -1, test_user.id
@@ -168,6 +174,7 @@ class TestNegativeStockPrevention:
         db.commit()
 
         import pytest
+
         with pytest.raises(ValueError) as exc_info:
             inventory_service.adjust_stock_quantity(
                 db, test_inventory_item.id, -15, test_user.id
@@ -184,7 +191,7 @@ class TestLowStockDetection:
     def test_is_low_stock_below_threshold(self, db, test_user):
         """Test item is flagged as low stock when below threshold."""
         from app.models.inventory import InventoryItem
-        
+
         item = InventoryItem(
             name="Low Stock Item",
             quantity=5,
@@ -200,7 +207,7 @@ class TestLowStockDetection:
     def test_is_low_stock_at_threshold(self, db, test_user):
         """Test item is flagged as low stock when at threshold."""
         from app.models.inventory import InventoryItem
-        
+
         item = InventoryItem(
             name="At Threshold Item",
             quantity=10,
@@ -216,7 +223,7 @@ class TestLowStockDetection:
     def test_is_not_low_stock_above_threshold(self, db, test_user):
         """Test item is not flagged as low stock when above threshold."""
         from app.models.inventory import InventoryItem
-        
+
         item = InventoryItem(
             name="Good Stock Item",
             quantity=15,
@@ -232,7 +239,7 @@ class TestLowStockDetection:
     def test_is_not_low_stock_when_no_threshold(self, db, test_user):
         """Test item is not flagged as low stock when threshold is not set."""
         from app.models.inventory import InventoryItem
-        
+
         item = InventoryItem(
             name="No Threshold Item",
             quantity=1,
@@ -248,7 +255,7 @@ class TestLowStockDetection:
     def test_is_not_low_stock_zero_quantity_no_threshold(self, db, test_user):
         """Test zero quantity with no threshold is not flagged as low stock."""
         from app.models.inventory import InventoryItem
-        
+
         item = InventoryItem(
             name="Zero No Threshold",
             quantity=0,
@@ -265,7 +272,9 @@ class TestLowStockDetection:
 class TestLowStockThresholdChanges:
     """Test how stock status changes relative to threshold."""
 
-    def test_decrement_triggers_low_stock_status(self, db, test_user, test_inventory_item):
+    def test_decrement_triggers_low_stock_status(
+        self, db, test_user, test_inventory_item
+    ):
         """Test that decrementing below threshold triggers low stock status."""
         test_inventory_item.quantity = 12
         test_inventory_item.low_stock_threshold = 10
@@ -283,7 +292,9 @@ class TestLowStockThresholdChanges:
         assert result.quantity == 7
         assert result.is_low_stock is True
 
-    def test_increment_removes_low_stock_status(self, db, test_user, test_inventory_item):
+    def test_increment_removes_low_stock_status(
+        self, db, test_user, test_inventory_item
+    ):
         """Test that incrementing above threshold removes low stock status."""
         test_inventory_item.quantity = 8
         test_inventory_item.low_stock_threshold = 10
@@ -372,7 +383,7 @@ class TestStockEdgeCases:
     def test_adjust_stock_with_zero_initial_quantity(self, db, test_user):
         """Test adjusting stock for item with zero initial quantity."""
         from app.models.inventory import InventoryItem
-        
+
         item = InventoryItem(
             name="Zero Stock Item",
             quantity=0,
@@ -383,9 +394,7 @@ class TestStockEdgeCases:
         db.commit()
         db.refresh(item)
 
-        result = inventory_service.adjust_stock_quantity(
-            db, item.id, 5, test_user.id
-        )
+        result = inventory_service.adjust_stock_quantity(db, item.id, 5, test_user.id)
 
         assert result.quantity == 5
 
@@ -403,7 +412,7 @@ class TestStockEdgeCases:
     def test_stock_threshold_zero(self, db, test_user):
         """Test low stock behavior when threshold is zero."""
         from app.models.inventory import InventoryItem
-        
+
         item = InventoryItem(
             name="Zero Threshold Item",
             quantity=1,

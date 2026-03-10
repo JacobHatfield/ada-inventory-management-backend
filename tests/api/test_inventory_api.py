@@ -701,13 +701,13 @@ class TestStockIncrementAPI:
     def test_increment_stock_success(self, client, auth_headers, test_inventory_item):
         """Test successful stock increment operation."""
         original_quantity = test_inventory_item.quantity
-        
+
         response = client.post(
             f"/api/v1/inventory/{test_inventory_item.id}/increment",
             json={"quantity_change": 10, "reason": "Restock"},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["id"] == test_inventory_item.id
@@ -722,17 +722,17 @@ class TestStockIncrementAPI:
         # Set initial quantity
         test_inventory_item.quantity = 10
         db.commit()
-        
+
         response = client.post(
             f"/api/v1/inventory/{test_inventory_item.id}/increment",
             json={"quantity_change": 5},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["quantity"] == 15
-        
+
         # Verify the change persisted
         verify_response = client.get(
             f"/api/v1/inventory/{test_inventory_item.id}",
@@ -744,13 +744,13 @@ class TestStockIncrementAPI:
     def test_increment_with_reason(self, client, auth_headers, test_inventory_item):
         """Test that increment accepts optional reason field."""
         original_quantity = test_inventory_item.quantity
-        
+
         response = client.post(
             f"/api/v1/inventory/{test_inventory_item.id}/increment",
             json={"quantity_change": 10, "reason": "Quarterly restock"},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["quantity"] == original_quantity + 10
@@ -760,17 +760,19 @@ class TestStockIncrementAPI:
 class TestStockDecrementAPI:
     """Test stock decrement endpoint."""
 
-    def test_decrement_stock_success(self, client, auth_headers, test_inventory_item, db):
+    def test_decrement_stock_success(
+        self, client, auth_headers, test_inventory_item, db
+    ):
         """Test successful stock decrement operation."""
         test_inventory_item.quantity = 50
         db.commit()
-        
+
         response = client.post(
             f"/api/v1/inventory/{test_inventory_item.id}/decrement",
             json={"quantity_change": 10, "reason": "Sale"},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["id"] == test_inventory_item.id
@@ -784,17 +786,17 @@ class TestStockDecrementAPI:
         """Test that decrement updates quantity correctly in response."""
         test_inventory_item.quantity = 30
         db.commit()
-        
+
         response = client.post(
             f"/api/v1/inventory/{test_inventory_item.id}/decrement",
             json={"quantity_change": 8},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["quantity"] == 22
-        
+
         # Verify the change persisted
         verify_response = client.get(
             f"/api/v1/inventory/{test_inventory_item.id}",
@@ -808,13 +810,13 @@ class TestStockDecrementAPI:
         test_inventory_item.quantity = 25
         db.commit()
         original_quantity = test_inventory_item.quantity
-        
+
         response = client.post(
             f"/api/v1/inventory/{test_inventory_item.id}/decrement",
             json={"quantity_change": 5, "reason": "Customer sale"},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["quantity"] == original_quantity - 5
@@ -823,13 +825,13 @@ class TestStockDecrementAPI:
         """Test decrementing stock to exactly zero."""
         test_inventory_item.quantity = 10
         db.commit()
-        
+
         response = client.post(
             f"/api/v1/inventory/{test_inventory_item.id}/decrement",
             json={"quantity_change": 10},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["quantity"] == 0
@@ -845,16 +847,16 @@ class TestStockNegativePreventionAPI:
         """Test that decrementing below zero returns 400 Bad Request."""
         test_inventory_item.quantity = 5
         db.commit()
-        
+
         response = client.post(
             f"/api/v1/inventory/{test_inventory_item.id}/decrement",
             json={"quantity_change": 10},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "detail" in response.json()
-        
+
         # Verify quantity unchanged
         verify_response = client.get(
             f"/api/v1/inventory/{test_inventory_item.id}",
@@ -868,13 +870,13 @@ class TestStockNegativePreventionAPI:
         """Test that decrementing from zero returns 400 Bad Request."""
         test_inventory_item.quantity = 0
         db.commit()
-        
+
         response = client.post(
             f"/api/v1/inventory/{test_inventory_item.id}/decrement",
             json={"quantity_change": 1},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "detail" in response.json()
 
@@ -884,15 +886,15 @@ class TestStockNegativePreventionAPI:
         """Test that large decrements that would go negative are prevented."""
         test_inventory_item.quantity = 100
         db.commit()
-        
+
         response = client.post(
             f"/api/v1/inventory/{test_inventory_item.id}/decrement",
             json={"quantity_change": 150},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        
+
         # Verify quantity unchanged
         verify_response = client.get(
             f"/api/v1/inventory/{test_inventory_item.id}",
@@ -910,7 +912,7 @@ class TestStockAdjustmentAuth:
             f"/api/v1/inventory/{test_inventory_item.id}/increment",
             json={"quantity_change": 10},
         )
-        
+
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_decrement_requires_authentication(self, client, test_inventory_item):
@@ -919,7 +921,7 @@ class TestStockAdjustmentAuth:
             f"/api/v1/inventory/{test_inventory_item.id}/decrement",
             json={"quantity_change": 5},
         )
-        
+
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_cannot_increment_other_users_item(
@@ -933,13 +935,13 @@ class TestStockAdjustmentAuth:
         )
         other_user_token = login_response.json()["access_token"]
         other_headers = {"Authorization": f"Bearer {other_user_token}"}
-        
+
         response = client.post(
             f"/api/v1/inventory/{test_inventory_item.id}/increment",
             json={"quantity_change": 10},
             headers=other_headers,
         )
-        
+
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_cannot_decrement_other_users_item(
@@ -953,13 +955,13 @@ class TestStockAdjustmentAuth:
         )
         other_user_token = login_response.json()["access_token"]
         other_headers = {"Authorization": f"Bearer {other_user_token}"}
-        
+
         response = client.post(
             f"/api/v1/inventory/{test_inventory_item.id}/decrement",
             json={"quantity_change": 5},
             headers=other_headers,
         )
-        
+
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -975,7 +977,7 @@ class TestStockAdjustmentValidation:
             json={"quantity_change": "ten"},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     def test_decrement_invalid_quantity_type(
@@ -987,7 +989,7 @@ class TestStockAdjustmentValidation:
             json={"quantity_change": "five"},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     def test_increment_zero_quantity(self, client, auth_headers, test_inventory_item):
@@ -997,7 +999,7 @@ class TestStockAdjustmentValidation:
             json={"quantity_change": 0},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     def test_decrement_zero_quantity(self, client, auth_headers, test_inventory_item):
@@ -1007,7 +1009,7 @@ class TestStockAdjustmentValidation:
             json={"quantity_change": 0},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     def test_increment_negative_quantity(
@@ -1019,7 +1021,7 @@ class TestStockAdjustmentValidation:
             json={"quantity_change": -5},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     def test_decrement_negative_quantity(
@@ -1031,27 +1033,27 @@ class TestStockAdjustmentValidation:
             json={"quantity_change": -3},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     def test_nonexistent_item(self, client, auth_headers):
         """Test adjusting stock for non-existent inventory item."""
         nonexistent_id = 99999
-        
+
         response = client.post(
             f"/api/v1/inventory/{nonexistent_id}/increment",
             json={"quantity_change": 10},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        
+
         response = client.post(
             f"/api/v1/inventory/{nonexistent_id}/decrement",
             json={"quantity_change": 5},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -1064,7 +1066,7 @@ class TestStockAdjustmentEdgeCases:
         """Test multiple rapid stock adjustments on same item."""
         test_inventory_item.quantity = 50
         db.commit()
-        
+
         # Perform multiple adjustments
         client.post(
             f"/api/v1/inventory/{test_inventory_item.id}/increment",
@@ -1081,7 +1083,7 @@ class TestStockAdjustmentEdgeCases:
             json={"quantity_change": 15},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         # 50 + 10 - 5 + 15 = 70
@@ -1093,13 +1095,13 @@ class TestStockAdjustmentEdgeCases:
         """Test incrementing by very large quantity."""
         test_inventory_item.quantity = 100
         db.commit()
-        
+
         response = client.post(
             f"/api/v1/inventory/{test_inventory_item.id}/increment",
             json={"quantity_change": 10000},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["quantity"] == 10100
@@ -1110,7 +1112,7 @@ class TestStockAdjustmentEdgeCases:
         """Test stock adjustment after updating other item fields."""
         test_inventory_item.quantity = 30
         db.commit()
-        
+
         # Update item name
         client.put(
             f"/api/v1/inventory/{test_inventory_item.id}",
@@ -1121,14 +1123,14 @@ class TestStockAdjustmentEdgeCases:
             },
             headers=auth_headers,
         )
-        
+
         # Now adjust stock
         response = client.post(
             f"/api/v1/inventory/{test_inventory_item.id}/increment",
             json={"quantity_change": 20},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["quantity"] == 50
@@ -1141,21 +1143,21 @@ class TestStockAdjustmentEdgeCases:
         test_inventory_item.quantity = 5
         test_inventory_item.low_stock_threshold = 10
         db.commit()
-        
+
         # Item should be low stock
         response = client.get(
             f"/api/v1/inventory/{test_inventory_item.id}",
             headers=auth_headers,
         )
         assert response.json()["is_low_stock"] is True
-        
+
         # Increment above threshold
         response = client.post(
             f"/api/v1/inventory/{test_inventory_item.id}/increment",
             json={"quantity_change": 10},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["quantity"] == 15
@@ -1168,13 +1170,13 @@ class TestStockAdjustmentEdgeCases:
         test_inventory_item.quantity = 20
         test_inventory_item.low_stock_threshold = 10
         db.commit()
-        
+
         response = client.post(
             f"/api/v1/inventory/{test_inventory_item.id}/decrement",
             json={"quantity_change": 10},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["quantity"] == 10
