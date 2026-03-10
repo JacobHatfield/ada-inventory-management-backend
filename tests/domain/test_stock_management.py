@@ -111,3 +111,68 @@ class TestStockDecrement:
 
         assert result.quantity == 100 - 10 - 15 - 20
         assert result.quantity == 55
+
+
+class TestNegativeStockPrevention:
+    """Test the critical business rule: prevent negative stock."""
+
+    def test_prevent_negative_stock_basic(self, db, test_user, test_inventory_item):
+        """Test that stock cannot go negative."""
+        test_inventory_item.quantity = 5
+        db.commit()
+
+        import pytest
+        with pytest.raises(ValueError, match="negative stock"):
+            inventory_service.adjust_stock_quantity(
+                db=db,
+                item_id=test_inventory_item.id,
+                quantity_change=-10,
+                user_id=test_user.id,
+            )
+
+        # Verify quantity was not changed (transaction rolled back)
+        db.refresh(test_inventory_item)
+        assert test_inventory_item.quantity == 5
+
+    def test_prevent_negative_stock_by_one(self, db, test_user, test_inventory_item):
+        """Test edge case: attempting to go negative by one."""
+        test_inventory_item.quantity = 10
+        db.commit()
+
+        import pytest
+        with pytest.raises(ValueError, match="negative stock"):
+            inventory_service.adjust_stock_quantity(
+                db, test_inventory_item.id, -11, test_user.id
+            )
+
+        db.refresh(test_inventory_item)
+        assert test_inventory_item.quantity == 10
+
+    def test_prevent_negative_from_zero(self, db, test_user, test_inventory_item):
+        """Test that stock cannot go negative from zero."""
+        test_inventory_item.quantity = 0
+        db.commit()
+
+        import pytest
+        with pytest.raises(ValueError, match="negative stock"):
+            inventory_service.adjust_stock_quantity(
+                db, test_inventory_item.id, -1, test_user.id
+            )
+
+        db.refresh(test_inventory_item)
+        assert test_inventory_item.quantity == 0
+
+    def test_error_message_includes_details(self, db, test_user, test_inventory_item):
+        """Test that error message includes current and attempted quantities."""
+        test_inventory_item.quantity = 8
+        db.commit()
+
+        import pytest
+        with pytest.raises(ValueError) as exc_info:
+            inventory_service.adjust_stock_quantity(
+                db, test_inventory_item.id, -15, test_user.id
+            )
+
+        error_message = str(exc_info.value)
+        assert "8" in error_message  # Current quantity
+        assert "-15" in error_message  # Attempted change
