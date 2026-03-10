@@ -899,3 +899,65 @@ class TestStockNegativePreventionAPI:
             headers=auth_headers,
         )
         assert verify_response.json()["quantity"] == 100
+
+
+class TestStockAdjustmentAuth:
+    """Test authentication and authorization for stock adjustment endpoints."""
+
+    def test_increment_requires_authentication(self, client, test_inventory_item):
+        """Test that increment endpoint requires authentication."""
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/increment",
+            json={"quantity_change": 10},
+        )
+        
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_decrement_requires_authentication(self, client, test_inventory_item):
+        """Test that decrement endpoint requires authentication."""
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/decrement",
+            json={"quantity_change": 5},
+        )
+        
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_cannot_increment_other_users_item(
+        self, client, test_inventory_item, other_user, db
+    ):
+        """Test that users cannot increment other users' inventory items."""
+        # Login as other_user to get valid token
+        login_response = client.post(
+            "/api/v1/auth/login",
+            json={"email": "otheruser@example.com", "password": "otherpassword123"},
+        )
+        other_user_token = login_response.json()["access_token"]
+        other_headers = {"Authorization": f"Bearer {other_user_token}"}
+        
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/increment",
+            json={"quantity_change": 10},
+            headers=other_headers,
+        )
+        
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_cannot_decrement_other_users_item(
+        self, client, test_inventory_item, other_user, db
+    ):
+        """Test that users cannot decrement other users' inventory items."""
+        # Login as other_user to get valid token
+        login_response = client.post(
+            "/api/v1/auth/login",
+            json={"email": "otheruser@example.com", "password": "otherpassword123"},
+        )
+        other_user_token = login_response.json()["access_token"]
+        other_headers = {"Authorization": f"Bearer {other_user_token}"}
+        
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/decrement",
+            json={"quantity_change": 5},
+            headers=other_headers,
+        )
+        
+        assert response.status_code == status.HTTP_404_NOT_FOUND
