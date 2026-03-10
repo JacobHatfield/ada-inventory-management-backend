@@ -834,3 +834,68 @@ class TestStockDecrementAPI:
         data = response.json()
         assert data["quantity"] == 0
         assert data["is_low_stock"] is True
+
+
+class TestStockNegativePreventionAPI:
+    """Test that API prevents negative stock through decrement endpoint."""
+
+    def test_cannot_decrement_below_zero(
+        self, client, auth_headers, test_inventory_item, db
+    ):
+        """Test that decrementing below zero returns 400 Bad Request."""
+        test_inventory_item.quantity = 5
+        db.commit()
+        
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/decrement",
+            json={"quantity_change": 10},
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "detail" in response.json()
+        
+        # Verify quantity unchanged
+        verify_response = client.get(
+            f"/api/v1/inventory/{test_inventory_item.id}",
+            headers=auth_headers,
+        )
+        assert verify_response.json()["quantity"] == 5
+
+    def test_cannot_decrement_from_zero(
+        self, client, auth_headers, test_inventory_item, db
+    ):
+        """Test that decrementing from zero returns 400 Bad Request."""
+        test_inventory_item.quantity = 0
+        db.commit()
+        
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/decrement",
+            json={"quantity_change": 1},
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "detail" in response.json()
+
+    def test_large_decrement_prevented(
+        self, client, auth_headers, test_inventory_item, db
+    ):
+        """Test that large decrements that would go negative are prevented."""
+        test_inventory_item.quantity = 100
+        db.commit()
+        
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/decrement",
+            json={"quantity_change": 150},
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        
+        # Verify quantity unchanged
+        verify_response = client.get(
+            f"/api/v1/inventory/{test_inventory_item.id}",
+            headers=auth_headers,
+        )
+        assert verify_response.json()["quantity"] == 100
