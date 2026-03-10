@@ -334,3 +334,33 @@ class TestStockOwnershipValidation:
         )
 
         assert result is None
+
+
+class TestStockReasonTracking:
+    """Test optional reason parameter for stock adjustments."""
+
+    def test_adjust_with_reason(self, db, test_user, test_inventory_item):
+        """Test that stock can be adjusted with a reason provided."""
+        result = inventory_service.adjust_stock_quantity(
+            db=db,
+            item_id=test_inventory_item.id,
+            quantity_change=15,
+            user_id=test_user.id,
+            reason="Quarterly restock",
+        )
+
+        assert result is not None
+        # Reason is logged but doesn't affect the item itself
+        # (would be in audit logs in future implementation)
+
+    def test_adjust_without_reason(self, db, test_user, test_inventory_item):
+        """Test that stock can be adjusted without a reason (optional)."""
+        result = inventory_service.adjust_stock_quantity(
+            db=db,
+            item_id=test_inventory_item.id,
+            quantity_change=15,
+            user_id=test_user.id,
+            # No reason parameter
+        )
+
+        assert result is not None
