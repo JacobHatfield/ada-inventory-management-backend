@@ -260,3 +260,43 @@ class TestLowStockDetection:
         db.refresh(item)
 
         assert item.is_low_stock is False
+
+
+class TestLowStockThresholdChanges:
+    """Test how stock status changes relative to threshold."""
+
+    def test_decrement_triggers_low_stock_status(self, db, test_user, test_inventory_item):
+        """Test that decrementing below threshold triggers low stock status."""
+        test_inventory_item.quantity = 12
+        test_inventory_item.low_stock_threshold = 10
+        db.commit()
+
+        # Initially not low stock
+        db.refresh(test_inventory_item)
+        assert test_inventory_item.is_low_stock is False
+
+        # Decrement below threshold
+        result = inventory_service.adjust_stock_quantity(
+            db, test_inventory_item.id, -5, test_user.id
+        )
+
+        assert result.quantity == 7
+        assert result.is_low_stock is True
+
+    def test_increment_removes_low_stock_status(self, db, test_user, test_inventory_item):
+        """Test that incrementing above threshold removes low stock status."""
+        test_inventory_item.quantity = 8
+        test_inventory_item.low_stock_threshold = 10
+        db.commit()
+
+        # Initially low stock
+        db.refresh(test_inventory_item)
+        assert test_inventory_item.is_low_stock is True
+
+        # Increment above threshold
+        result = inventory_service.adjust_stock_quantity(
+            db, test_inventory_item.id, 5, test_user.id
+        )
+
+        assert result.quantity == 13
+        assert result.is_low_stock is False
