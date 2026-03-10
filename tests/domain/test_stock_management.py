@@ -176,3 +176,87 @@ class TestNegativeStockPrevention:
         error_message = str(exc_info.value)
         assert "8" in error_message  # Current quantity
         assert "-15" in error_message  # Attempted change
+
+
+class TestLowStockDetection:
+    """Test low stock threshold detection logic."""
+
+    def test_is_low_stock_below_threshold(self, db, test_user):
+        """Test item is flagged as low stock when below threshold."""
+        from app.models.inventory import InventoryItem
+        
+        item = InventoryItem(
+            name="Low Stock Item",
+            quantity=5,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+        assert item.is_low_stock is True
+
+    def test_is_low_stock_at_threshold(self, db, test_user):
+        """Test item is flagged as low stock when at threshold."""
+        from app.models.inventory import InventoryItem
+        
+        item = InventoryItem(
+            name="At Threshold Item",
+            quantity=10,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+        assert item.is_low_stock is True
+
+    def test_is_not_low_stock_above_threshold(self, db, test_user):
+        """Test item is not flagged as low stock when above threshold."""
+        from app.models.inventory import InventoryItem
+        
+        item = InventoryItem(
+            name="Good Stock Item",
+            quantity=15,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+        assert item.is_low_stock is False
+
+    def test_is_not_low_stock_when_no_threshold(self, db, test_user):
+        """Test item is not flagged as low stock when threshold is not set."""
+        from app.models.inventory import InventoryItem
+        
+        item = InventoryItem(
+            name="No Threshold Item",
+            quantity=1,
+            low_stock_threshold=None,
+            user_id=test_user.id,
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+        assert item.is_low_stock is False
+
+    def test_is_not_low_stock_zero_quantity_no_threshold(self, db, test_user):
+        """Test zero quantity with no threshold is not flagged as low stock."""
+        from app.models.inventory import InventoryItem
+        
+        item = InventoryItem(
+            name="Zero No Threshold",
+            quantity=0,
+            low_stock_threshold=None,
+            user_id=test_user.id,
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+        assert item.is_low_stock is False
