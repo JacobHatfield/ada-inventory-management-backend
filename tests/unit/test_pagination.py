@@ -1,11 +1,13 @@
 """Unit tests for pagination utilities."""
 
 import pytest
+from pydantic import BaseModel
 
 from app.utils.pagination import (
     MIN_PAGE_SIZE,
     MAX_PAGE_SIZE,
     DEFAULT_PAGE_SIZE,
+    PaginatedResponse,
     calculate_total_pages,
     page_to_offset,
     offset_to_page,
@@ -219,5 +221,136 @@ class TestGetPaginationParams:
         offset, limit = get_pagination_params(page=100, limit=10)
         assert offset == 990  # (100 - 1) * 10
         assert limit == 10
+
+
+class TestPaginatedResponse:
+    """Test PaginatedResponse schema."""
+
+    def test_create_paginated_response_with_items(self):
+        """Test creating a paginated response with typed items."""
+
+        # Define a simple item model
+        class TestItem(BaseModel):
+            id: int
+            name: str
+
+        items = [
+            TestItem(id=1, name="Item 1"),
+            TestItem(id=2, name="Item 2"),
+        ]
+
+        response = PaginatedResponse[TestItem](
+            items=items,
+            total=50,
+            page=1,
+            page_size=10,
+            total_pages=5,
+        )
+
+        assert len(response.items) == 2
+        assert response.total == 50
+        assert response.page == 1
+        assert response.page_size == 10
+        assert response.total_pages == 5
+        assert response.items[0].name == "Item 1"
+
+    def test_empty_paginated_response(self):
+        """Test creating empty paginated response."""
+
+        class TestItem(BaseModel):
+            id: int
+
+        response = PaginatedResponse[TestItem](
+            items=[],
+            total=0,
+            page=1,
+            page_size=10,
+            total_pages=0,
+        )
+
+        assert len(response.items) == 0
+        assert response.total == 0
+        assert response.total_pages == 0
+
+    def test_validates_page_minimum(self):
+        """Test that page must be >= 1."""
+
+        class TestItem(BaseModel):
+            id: int
+
+        with pytest.raises(Exception):  # Pydantic ValidationError
+            PaginatedResponse[TestItem](
+                items=[],
+                total=0,
+                page=0,  # Invalid: page must be >= 1
+                page_size=10,
+                total_pages=0,
+            )
+
+    def test_validates_page_size_bounds(self):
+        """Test that page_size must be within MIN_PAGE_SIZE and MAX_PAGE_SIZE."""
+
+        class TestItem(BaseModel):
+            id: int
+
+        # Test below minimum
+        with pytest.raises(Exception):  # Pydantic ValidationError
+            PaginatedResponse[TestItem](
+                items=[],
+                total=0,
+                page=1,
+                page_size=0,  # Invalid: below MIN_PAGE_SIZE
+                total_pages=0,
+            )
+
+        # Test above maximum
+        with pytest.raises(Exception):  # Pydantic ValidationError
+            PaginatedResponse[TestItem](
+                items=[],
+                total=0,
+                page=1,
+                page_size=101,  # Invalid: above MAX_PAGE_SIZE
+                total_pages=0,
+            )
+
+    def test_validates_negative_total(self):
+        """Test that total cannot be negative."""
+
+        class TestItem(BaseModel):
+            id: int
+
+        with pytest.raises(Exception):  # Pydantic ValidationError
+            PaginatedResponse[TestItem](
+                items=[],
+                total=-1,  # Invalid: total must be >= 0
+                page=1,
+                page_size=10,
+                total_pages=0,
+            )
+
+    def test_json_serialization(self):
+        """Test that paginated response can be serialized to JSON."""
+
+        class TestItem(BaseModel):
+            id: int
+            name: str
+
+        items = [TestItem(id=1, name="Test")]
+        response = PaginatedResponse[TestItem](
+            items=items,
+            total=100,
+            page=2,
+            page_size=10,
+            total_pages=10,
+        )
+
+        json_data = response.model_dump()
+        assert json_data["total"] == 100
+        assert json_data["page"] == 2
+        assert json_data["page_size"] == 10
+        assert json_data["total_pages"] == 10
+        assert len(json_data["items"]) == 1
+        assert json_data["items"][0]["name"] == "Test"
+
 
 
