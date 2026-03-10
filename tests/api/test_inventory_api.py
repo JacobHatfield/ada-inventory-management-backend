@@ -755,3 +755,82 @@ class TestStockIncrementAPI:
         data = response.json()
         assert data["quantity"] == original_quantity + 10
         # Reason is accepted and logged (for future audit functionality)
+
+
+class TestStockDecrementAPI:
+    """Test stock decrement endpoint."""
+
+    def test_decrement_stock_success(self, client, auth_headers, test_inventory_item, db):
+        """Test successful stock decrement operation."""
+        test_inventory_item.quantity = 50
+        db.commit()
+        
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/decrement",
+            json={"quantity_change": 10, "reason": "Sale"},
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["id"] == test_inventory_item.id
+        assert data["quantity"] == 40
+        assert "is_low_stock" in data
+        assert "updated_at" in data
+
+    def test_decrement_stock_updates_quantity_correctly(
+        self, client, auth_headers, test_inventory_item, db
+    ):
+        """Test that decrement updates quantity correctly in response."""
+        test_inventory_item.quantity = 30
+        db.commit()
+        
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/decrement",
+            json={"quantity_change": 8},
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["quantity"] == 22
+        
+        # Verify the change persisted
+        verify_response = client.get(
+            f"/api/v1/inventory/{test_inventory_item.id}",
+            headers=auth_headers,
+        )
+        assert verify_response.status_code == status.HTTP_200_OK
+        assert verify_response.json()["quantity"] == 22
+
+    def test_decrement_with_reason(self, client, auth_headers, test_inventory_item, db):
+        """Test that decrement accepts optional reason field."""
+        test_inventory_item.quantity = 25
+        db.commit()
+        original_quantity = test_inventory_item.quantity
+        
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/decrement",
+            json={"quantity_change": 5, "reason": "Customer sale"},
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["quantity"] == original_quantity - 5
+
+    def test_decrement_to_zero(self, client, auth_headers, test_inventory_item, db):
+        """Test decrementing stock to exactly zero."""
+        test_inventory_item.quantity = 10
+        db.commit()
+        
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/decrement",
+            json={"quantity_change": 10},
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["quantity"] == 0
+        assert data["is_low_stock"] is True
