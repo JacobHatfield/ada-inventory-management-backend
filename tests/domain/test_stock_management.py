@@ -364,3 +364,61 @@ class TestStockReasonTracking:
         )
 
         assert result is not None
+
+
+class TestStockEdgeCases:
+    """Test edge cases and boundary conditions."""
+
+    def test_adjust_stock_with_zero_initial_quantity(self, db, test_user):
+        """Test adjusting stock for item with zero initial quantity."""
+        from app.models.inventory import InventoryItem
+        
+        item = InventoryItem(
+            name="Zero Stock Item",
+            quantity=0,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+        result = inventory_service.adjust_stock_quantity(
+            db, item.id, 5, test_user.id
+        )
+
+        assert result.quantity == 5
+
+    def test_very_large_stock_quantities(self, db, test_user, test_inventory_item):
+        """Test handling of very large stock quantities."""
+        very_large_number = 1000000
+
+        result = inventory_service.adjust_stock_quantity(
+            db, test_inventory_item.id, very_large_number, test_user.id
+        )
+
+        assert result is not None
+        assert result.quantity >= very_large_number
+
+    def test_stock_threshold_zero(self, db, test_user):
+        """Test low stock behavior when threshold is zero."""
+        from app.models.inventory import InventoryItem
+        
+        item = InventoryItem(
+            name="Zero Threshold Item",
+            quantity=1,
+            low_stock_threshold=0,
+            user_id=test_user.id,
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+        # Quantity 1 is above threshold 0
+        assert item.is_low_stock is False
+
+        # At threshold
+        item.quantity = 0
+        db.commit()
+        db.refresh(item)
+        assert item.is_low_stock is True
