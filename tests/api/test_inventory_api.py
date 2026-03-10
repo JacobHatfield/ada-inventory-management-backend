@@ -118,16 +118,19 @@ class TestGetInventoryItems:
         response = client.get("/api/v1/inventory/", headers=auth_headers)
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert isinstance(data, list)
-        assert len(data) == 3
-        assert all(item["user_id"] == test_user.id for item in data)
+        assert "items" in data
+        assert "total" in data
+        assert data["total"] == 3
+        assert len(data["items"]) == 3
+        assert all(item["user_id"] == test_user.id for item in data["items"])
 
     def test_get_items_empty_list(self, client, auth_headers):
         """Test retrieving empty inventory list."""
         response = client.get("/api/v1/inventory/", headers=auth_headers)
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data == []
+        assert data["items"] == []
+        assert data["total"] == 0
 
     def test_get_items_only_own_items(
         self, client, auth_headers, db, test_user, other_user
@@ -157,9 +160,10 @@ class TestGetInventoryItems:
         response = client.get("/api/v1/inventory/", headers=auth_headers)
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 2
-        assert all(item["user_id"] == test_user.id for item in data)
-        assert all("Test User Item" in item["name"] for item in data)
+        assert data["total"] == 2
+        assert len(data["items"]) == 2
+        assert all(item["user_id"] == test_user.id for item in data["items"])
+        assert all("Test User Item" in item["name"] for item in data["items"])
 
     def test_filter_items_by_category(self, client, auth_headers, db, test_user):
         """Test filtering inventory items by category."""
@@ -214,9 +218,10 @@ class TestGetInventoryItems:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 3
-        assert all(item["category_id"] == category1.id for item in data)
-        assert all("Electronics Item" in item["name"] for item in data)
+        assert data["total"] == 3
+        assert len(data["items"]) == 3
+        assert all(item["category_id"] == category1.id for item in data["items"])
+        assert all("Electronics Item" in item["name"] for item in data["items"])
 
         # Filter by category2 (Books)
         response = client.get(
@@ -225,9 +230,10 @@ class TestGetInventoryItems:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 2
-        assert all(item["category_id"] == category2.id for item in data)
-        assert all("Book Item" in item["name"] for item in data)
+        assert data["total"] == 2
+        assert len(data["items"]) == 2
+        assert all(item["category_id"] == category2.id for item in data["items"])
+        assert all("Book Item" in item["name"] for item in data["items"])
 
     def test_filter_items_by_nonexistent_category(
         self, client, auth_headers, db, test_user
@@ -252,7 +258,8 @@ class TestGetInventoryItems:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data == []
+        assert data["items"] == []
+        assert data["total"] == 0
 
     def test_get_items_unauthenticated(self, client):
         """Test that authentication is required."""
@@ -434,8 +441,8 @@ class TestSearchInventory:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 1
-        assert data[0]["name"] == "Red Widget"
+        assert len(data["items"]) == 1
+        assert data["items"][0]["name"] == "Red Widget"
 
     def test_search_by_name_partial_match(
         self, client, auth_headers, search_filter_items
@@ -448,8 +455,8 @@ class TestSearchInventory:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 2
-        names = [item["name"] for item in data]
+        assert len(data["items"]) == 2
+        names = [item["name"] for item in data["items"]]
         assert "Red Widget" in names
         assert "Mini Widget" in names
 
@@ -462,7 +469,7 @@ class TestSearchInventory:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 0
+        assert len(data["items"]) == 0
 
     def test_search_empty_string(self, client, auth_headers, search_filter_items):
         """Test searching with empty string returns all items."""
@@ -473,7 +480,7 @@ class TestSearchInventory:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 8
+        assert len(data["items"]) == 8
 
 
 class TestFilterByStockStatus:
@@ -488,8 +495,8 @@ class TestFilterByStockStatus:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 2
-        names = [item["name"] for item in data]
+        assert len(data["items"]) == 2
+        names = [item["name"] for item in data["items"]]
         assert "Blue Gadget" in names
         assert "Yellow Device" in names
 
@@ -502,8 +509,8 @@ class TestFilterByStockStatus:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 2
-        names = [item["name"] for item in data]
+        assert len(data["items"]) == 2
+        names = [item["name"] for item in data["items"]]
         assert "Red Widget" in names
         assert "Black Equipment" in names
 
@@ -516,8 +523,8 @@ class TestFilterByStockStatus:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 4
-        names = [item["name"] for item in data]
+        assert len(data["items"]) == 4
+        names = [item["name"] for item in data["items"]]
         assert "Green Tool" in names
         assert "Purple Component" in names
         assert "Orange Supply" in names
@@ -547,7 +554,7 @@ class TestSortInventory:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        names = [item["name"] for item in data]
+        names = [item["name"] for item in data["items"]]
         assert names == sorted(names)
         assert names[0] == "Black Equipment"
         assert names[-1] == "Yellow Device"
@@ -561,7 +568,7 @@ class TestSortInventory:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        names = [item["name"] for item in data]
+        names = [item["name"] for item in data["items"]]
         assert names == sorted(names, reverse=True)
         assert names[0] == "Yellow Device"
         assert names[-1] == "Black Equipment"
@@ -577,7 +584,7 @@ class TestSortInventory:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        quantities = [item["quantity"] for item in data]
+        quantities = [item["quantity"] for item in data["items"]]
         assert quantities == sorted(quantities)
         assert quantities[0] == 0
         assert quantities[-1] == 200
@@ -593,7 +600,7 @@ class TestSortInventory:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        quantities = [item["quantity"] for item in data]
+        quantities = [item["quantity"] for item in data["items"]]
         assert quantities == sorted(quantities, reverse=True)
         assert quantities[0] == 200
         assert quantities[-1] == 0
@@ -607,8 +614,8 @@ class TestSortInventory:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 8
-        created_dates = [item["created_at"] for item in data]
+        assert len(data["items"]) == 8
+        created_dates = [item["created_at"] for item in data["items"]]
         assert created_dates == sorted(created_dates, reverse=True)
 
     def test_sort_invalid_field(self, client, auth_headers, search_filter_items):
@@ -635,9 +642,9 @@ class TestCombinedFiltersAndSearch:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 1
-        assert data[0]["name"] == "Red Widget"
-        assert data[0]["category_id"] == test_category.id
+        assert len(data["items"]) == 1
+        assert data["items"][0]["name"] == "Red Widget"
+        assert data["items"][0]["category_id"] == test_category.id
 
     def test_search_and_stock_filter(self, client, auth_headers, search_filter_items):
         """Test combining search with stock status filter."""
@@ -648,9 +655,9 @@ class TestCombinedFiltersAndSearch:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 1
-        assert data[0]["name"] == "Red Widget"
-        assert data[0]["quantity"] == 0
+        assert len(data["items"]) == 1
+        assert data["items"][0]["name"] == "Red Widget"
+        assert data["items"][0]["quantity"] == 0
 
     def test_all_filters_combined(
         self, client, auth_headers, search_filter_items, test_category
@@ -668,11 +675,11 @@ class TestCombinedFiltersAndSearch:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 2
-        assert data[0]["name"] == "Orange Supply"
-        assert data[0]["quantity"] == 200
-        assert data[1]["name"] == "Green Tool"
-        assert data[1]["quantity"] == 50
+        assert len(data["items"]) == 2
+        assert data["items"][0]["name"] == "Orange Supply"
+        assert data["items"][0]["quantity"] == 200
+        assert data["items"][1]["name"] == "Green Tool"
+        assert data["items"][1]["quantity"] == 50
 
     def test_pagination_with_filters(self, client, auth_headers, search_filter_items):
         """Test that pagination works correctly with filters applied."""
@@ -688,8 +695,8 @@ class TestCombinedFiltersAndSearch:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 3
-        names = [item["name"] for item in data]
+        assert len(data["items"]) == 3
+        names = [item["name"] for item in data["items"]]
         assert names[0] == "Green Tool"
         assert names[1] == "Mini Widget"
         assert names[2] == "Orange Supply"
