@@ -961,3 +961,95 @@ class TestStockAdjustmentAuth:
         )
         
         assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+class TestStockAdjustmentValidation:
+    """Test input validation for stock adjustment endpoints."""
+
+    def test_increment_invalid_quantity_type(
+        self, client, auth_headers, test_inventory_item
+    ):
+        """Test that increment rejects non-integer quantity."""
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/increment",
+            json={"quantity_change": "ten"},
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_decrement_invalid_quantity_type(
+        self, client, auth_headers, test_inventory_item
+    ):
+        """Test that decrement rejects non-integer quantity."""
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/decrement",
+            json={"quantity_change": "five"},
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_increment_zero_quantity(self, client, auth_headers, test_inventory_item):
+        """Test that increment rejects zero quantity."""
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/increment",
+            json={"quantity_change": 0},
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_decrement_zero_quantity(self, client, auth_headers, test_inventory_item):
+        """Test that decrement rejects zero quantity."""
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/decrement",
+            json={"quantity_change": 0},
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_increment_negative_quantity(
+        self, client, auth_headers, test_inventory_item
+    ):
+        """Test that increment rejects negative quantity."""
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/increment",
+            json={"quantity_change": -5},
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_decrement_negative_quantity(
+        self, client, auth_headers, test_inventory_item
+    ):
+        """Test that decrement rejects negative quantity."""
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/decrement",
+            json={"quantity_change": -3},
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_nonexistent_item(self, client, auth_headers):
+        """Test adjusting stock for non-existent inventory item."""
+        nonexistent_id = 99999
+        
+        response = client.post(
+            f"/api/v1/inventory/{nonexistent_id}/increment",
+            json={"quantity_change": 10},
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        
+        response = client.post(
+            f"/api/v1/inventory/{nonexistent_id}/decrement",
+            json={"quantity_change": 5},
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == status.HTTP_404_NOT_FOUND
