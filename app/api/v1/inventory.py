@@ -1,6 +1,6 @@
 """Inventory management API routes."""
 
-from typing import Annotated, List, Literal, Optional
+from typing import Annotated, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -8,13 +8,11 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_current_active_user
 from app.models.user import User
-from app.schemas.inventory import (
-    InventoryItemCreate,
-    InventoryItemResponse,
-    InventoryItemUpdate,
-    StockUpdate,
-)
+from app.schemas.inventory import (InventoryItemCreate, InventoryItemResponse,
+                                   InventoryItemUpdate, StockUpdate)
 from app.services import inventory_service
+from app.utils.pagination import (PaginatedResponse, calculate_total_pages,
+                                  get_pagination_params)
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
@@ -38,12 +36,16 @@ def create_inventory_item(
         )
 
 
-@router.get("/", response_model=List[InventoryItemResponse])
+@router.get("/", response_model=PaginatedResponse[InventoryItemResponse])
 def get_inventory_items(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
-    skip: int = 0,
-    limit: int = 100,
+    page: Optional[int] = Query(None, ge=1, description="Page number (1-indexed)"),
+    page_size: Optional[int] = Query(
+        None, ge=1, description="Number of items per page"
+    ),
+    skip: int = Query(0, ge=0, description="Number of items to skip (offset)"),
+    limit: int = Query(100, ge=1, le=100, description="Maximum items per page"),
     category_id: Optional[int] = Query(None, description="Filter by category ID"),
     search: Optional[str] = Query(
         None, description="Search items by name (case-insensitive)"
@@ -56,19 +58,41 @@ def get_inventory_items(
     ),
     sort_order: Literal["asc", "desc"] = Query("desc", description="Sort order"),
 ):
-    """Get all inventory items with optional search, filters, and sorting."""
+    """Get all inventory items with pagination, search, filters, and sorting."""
+    # Get pagination parameters (supports both page/page_size and skip/limit)
+    offset, final_page_size = get_pagination_params(
+        page=page, skip=skip, limit=limit, page_size=page_size
+    )
+
+    # Get total count with filters applied
+    total_count = inventory_service.get_user_inventory_items_count(
+        db, current_user.id, category_id, search, stock_status
+    )
+
+    # Get items for current page
     items = inventory_service.get_user_inventory_items(
         db,
         current_user.id,
-        skip,
-        limit,
+        offset,
+        final_page_size,
         category_id,
         search,
         stock_status,
         sort_by,
         sort_order,
     )
-    return items
+
+    # Calculate pagination metadata
+    total_pages = calculate_total_pages(total_count, final_page_size)
+    current_page = (offset // final_page_size) + 1 if offset >= 0 else 1
+
+    return PaginatedResponse(
+        items=items,
+        total=total_count,
+        page=current_page,
+        page_size=final_page_size,
+        total_pages=total_pages,
+    )
 
 
 @router.get("/{item_id}", response_model=InventoryItemResponse)

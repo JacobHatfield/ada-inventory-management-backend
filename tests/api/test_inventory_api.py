@@ -118,16 +118,19 @@ class TestGetInventoryItems:
         response = client.get("/api/v1/inventory/", headers=auth_headers)
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert isinstance(data, list)
-        assert len(data) == 3
-        assert all(item["user_id"] == test_user.id for item in data)
+        assert "items" in data
+        assert "total" in data
+        assert data["total"] == 3
+        assert len(data["items"]) == 3
+        assert all(item["user_id"] == test_user.id for item in data["items"])
 
     def test_get_items_empty_list(self, client, auth_headers):
         """Test retrieving empty inventory list."""
         response = client.get("/api/v1/inventory/", headers=auth_headers)
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data == []
+        assert data["items"] == []
+        assert data["total"] == 0
 
     def test_get_items_only_own_items(
         self, client, auth_headers, db, test_user, other_user
@@ -157,9 +160,10 @@ class TestGetInventoryItems:
         response = client.get("/api/v1/inventory/", headers=auth_headers)
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 2
-        assert all(item["user_id"] == test_user.id for item in data)
-        assert all("Test User Item" in item["name"] for item in data)
+        assert data["total"] == 2
+        assert len(data["items"]) == 2
+        assert all(item["user_id"] == test_user.id for item in data["items"])
+        assert all("Test User Item" in item["name"] for item in data["items"])
 
     def test_filter_items_by_category(self, client, auth_headers, db, test_user):
         """Test filtering inventory items by category."""
@@ -214,9 +218,10 @@ class TestGetInventoryItems:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 3
-        assert all(item["category_id"] == category1.id for item in data)
-        assert all("Electronics Item" in item["name"] for item in data)
+        assert data["total"] == 3
+        assert len(data["items"]) == 3
+        assert all(item["category_id"] == category1.id for item in data["items"])
+        assert all("Electronics Item" in item["name"] for item in data["items"])
 
         # Filter by category2 (Books)
         response = client.get(
@@ -225,9 +230,10 @@ class TestGetInventoryItems:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 2
-        assert all(item["category_id"] == category2.id for item in data)
-        assert all("Book Item" in item["name"] for item in data)
+        assert data["total"] == 2
+        assert len(data["items"]) == 2
+        assert all(item["category_id"] == category2.id for item in data["items"])
+        assert all("Book Item" in item["name"] for item in data["items"])
 
     def test_filter_items_by_nonexistent_category(
         self, client, auth_headers, db, test_user
@@ -252,7 +258,8 @@ class TestGetInventoryItems:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data == []
+        assert data["items"] == []
+        assert data["total"] == 0
 
     def test_get_items_unauthenticated(self, client):
         """Test that authentication is required."""
@@ -434,8 +441,8 @@ class TestSearchInventory:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 1
-        assert data[0]["name"] == "Red Widget"
+        assert len(data["items"]) == 1
+        assert data["items"][0]["name"] == "Red Widget"
 
     def test_search_by_name_partial_match(
         self, client, auth_headers, search_filter_items
@@ -448,8 +455,8 @@ class TestSearchInventory:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 2
-        names = [item["name"] for item in data]
+        assert len(data["items"]) == 2
+        names = [item["name"] for item in data["items"]]
         assert "Red Widget" in names
         assert "Mini Widget" in names
 
@@ -462,7 +469,7 @@ class TestSearchInventory:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 0
+        assert len(data["items"]) == 0
 
     def test_search_empty_string(self, client, auth_headers, search_filter_items):
         """Test searching with empty string returns all items."""
@@ -473,7 +480,7 @@ class TestSearchInventory:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 8
+        assert len(data["items"]) == 8
 
 
 class TestFilterByStockStatus:
@@ -488,8 +495,8 @@ class TestFilterByStockStatus:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 2
-        names = [item["name"] for item in data]
+        assert len(data["items"]) == 2
+        names = [item["name"] for item in data["items"]]
         assert "Blue Gadget" in names
         assert "Yellow Device" in names
 
@@ -502,8 +509,8 @@ class TestFilterByStockStatus:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 2
-        names = [item["name"] for item in data]
+        assert len(data["items"]) == 2
+        names = [item["name"] for item in data["items"]]
         assert "Red Widget" in names
         assert "Black Equipment" in names
 
@@ -516,8 +523,8 @@ class TestFilterByStockStatus:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 4
-        names = [item["name"] for item in data]
+        assert len(data["items"]) == 4
+        names = [item["name"] for item in data["items"]]
         assert "Green Tool" in names
         assert "Purple Component" in names
         assert "Orange Supply" in names
@@ -547,7 +554,7 @@ class TestSortInventory:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        names = [item["name"] for item in data]
+        names = [item["name"] for item in data["items"]]
         assert names == sorted(names)
         assert names[0] == "Black Equipment"
         assert names[-1] == "Yellow Device"
@@ -561,7 +568,7 @@ class TestSortInventory:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        names = [item["name"] for item in data]
+        names = [item["name"] for item in data["items"]]
         assert names == sorted(names, reverse=True)
         assert names[0] == "Yellow Device"
         assert names[-1] == "Black Equipment"
@@ -577,7 +584,7 @@ class TestSortInventory:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        quantities = [item["quantity"] for item in data]
+        quantities = [item["quantity"] for item in data["items"]]
         assert quantities == sorted(quantities)
         assert quantities[0] == 0
         assert quantities[-1] == 200
@@ -593,7 +600,7 @@ class TestSortInventory:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        quantities = [item["quantity"] for item in data]
+        quantities = [item["quantity"] for item in data["items"]]
         assert quantities == sorted(quantities, reverse=True)
         assert quantities[0] == 200
         assert quantities[-1] == 0
@@ -607,8 +614,8 @@ class TestSortInventory:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 8
-        created_dates = [item["created_at"] for item in data]
+        assert len(data["items"]) == 8
+        created_dates = [item["created_at"] for item in data["items"]]
         assert created_dates == sorted(created_dates, reverse=True)
 
     def test_sort_invalid_field(self, client, auth_headers, search_filter_items):
@@ -635,9 +642,9 @@ class TestCombinedFiltersAndSearch:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 1
-        assert data[0]["name"] == "Red Widget"
-        assert data[0]["category_id"] == test_category.id
+        assert len(data["items"]) == 1
+        assert data["items"][0]["name"] == "Red Widget"
+        assert data["items"][0]["category_id"] == test_category.id
 
     def test_search_and_stock_filter(self, client, auth_headers, search_filter_items):
         """Test combining search with stock status filter."""
@@ -648,9 +655,9 @@ class TestCombinedFiltersAndSearch:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 1
-        assert data[0]["name"] == "Red Widget"
-        assert data[0]["quantity"] == 0
+        assert len(data["items"]) == 1
+        assert data["items"][0]["name"] == "Red Widget"
+        assert data["items"][0]["quantity"] == 0
 
     def test_all_filters_combined(
         self, client, auth_headers, search_filter_items, test_category
@@ -668,11 +675,11 @@ class TestCombinedFiltersAndSearch:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 2
-        assert data[0]["name"] == "Orange Supply"
-        assert data[0]["quantity"] == 200
-        assert data[1]["name"] == "Green Tool"
-        assert data[1]["quantity"] == 50
+        assert len(data["items"]) == 2
+        assert data["items"][0]["name"] == "Orange Supply"
+        assert data["items"][0]["quantity"] == 200
+        assert data["items"][1]["name"] == "Green Tool"
+        assert data["items"][1]["quantity"] == 50
 
     def test_pagination_with_filters(self, client, auth_headers, search_filter_items):
         """Test that pagination works correctly with filters applied."""
@@ -688,8 +695,8 @@ class TestCombinedFiltersAndSearch:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 3
-        names = [item["name"] for item in data]
+        assert len(data["items"]) == 3
+        names = [item["name"] for item in data["items"]]
         assert names[0] == "Green Tool"
         assert names[1] == "Mini Widget"
         assert names[2] == "Orange Supply"
@@ -1182,3 +1189,288 @@ class TestStockAdjustmentEdgeCases:
         assert data["quantity"] == 10
         # At threshold, should be low stock
         assert data["is_low_stock"] is True
+
+
+class TestInventoryPagination:
+    """Test pagination functionality for inventory endpoints."""
+
+    def test_pagination_metadata_structure(self, client, auth_headers, db, test_user):
+        """Test that paginated response includes correct metadata structure."""
+        from app.models.inventory import InventoryItem
+
+        # Create multiple items
+        for i in range(5):
+            item = InventoryItem(
+                name=f"Item {i}",
+                description=f"Description {i}",
+                quantity=10 + i,
+                user_id=test_user.id,
+            )
+            db.add(item)
+        db.commit()
+
+        response = client.get("/api/v1/inventory/?page_size=3", headers=auth_headers)
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+
+        # Verify response structure
+        assert "items" in data
+        assert "total" in data
+        assert "page" in data
+        assert "page_size" in data
+        assert "total_pages" in data
+
+        # Verify metadata values
+        assert data["total"] == 5
+        assert data["page"] == 1
+        assert data["page_size"] == 3
+        assert data["total_pages"] == 2
+        assert len(data["items"]) == 3
+
+    def test_pagination_with_page_parameter(self, client, auth_headers, db, test_user):
+        """Test navigating through pages using page parameter."""
+        from app.models.inventory import InventoryItem
+
+        # Create 10 items
+        for i in range(10):
+            item = InventoryItem(
+                name=f"Item {i:02d}",
+                description=f"Description {i}",
+                quantity=100 + i,
+                user_id=test_user.id,
+            )
+            db.add(item)
+        db.commit()
+
+        # Get first page
+        response = client.get(
+            "/api/v1/inventory/?page=1&page_size=4", headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_200_OK
+        page1_data = response.json()
+        assert page1_data["page"] == 1
+        assert page1_data["page_size"] == 4
+        assert page1_data["total"] == 10
+        assert page1_data["total_pages"] == 3
+        assert len(page1_data["items"]) == 4
+
+        # Get second page
+        response = client.get(
+            "/api/v1/inventory/?page=2&page_size=4", headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_200_OK
+        page2_data = response.json()
+        assert page2_data["page"] == 2
+        assert len(page2_data["items"]) == 4
+
+        # Get third page (partial)
+        response = client.get(
+            "/api/v1/inventory/?page=3&page_size=4", headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_200_OK
+        page3_data = response.json()
+        assert page3_data["page"] == 3
+        assert len(page3_data["items"]) == 2
+
+        # Verify items are different across pages
+        page1_ids = {item["id"] for item in page1_data["items"]}
+        page2_ids = {item["id"] for item in page2_data["items"]}
+        page3_ids = {item["id"] for item in page3_data["items"]}
+        assert len(page1_ids & page2_ids) == 0  # No overlap
+        assert len(page2_ids & page3_ids) == 0  # No overlap
+
+    def test_pagination_page_boundaries(self, client, auth_headers, db, test_user):
+        """Test pagination at page boundaries."""
+        from app.models.inventory import InventoryItem
+
+        # Create 5 items
+        for i in range(5):
+            item = InventoryItem(
+                name=f"Item {i}",
+                description=f"Description {i}",
+                quantity=50,
+                user_id=test_user.id,
+            )
+            db.add(item)
+        db.commit()
+
+        # Test first page
+        response = client.get(
+            "/api/v1/inventory/?page=1&page_size=3", headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["page"] == 1
+        assert len(data["items"]) == 3
+
+        # Test last page
+        response = client.get(
+            "/api/v1/inventory/?page=2&page_size=3", headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["page"] == 2
+        assert len(data["items"]) == 2
+
+        # Test beyond last page (should return empty)
+        response = client.get(
+            "/api/v1/inventory/?page=3&page_size=3", headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["page"] == 3
+        assert len(data["items"]) == 0
+
+    def test_pagination_total_pages_calculation(
+        self, client, auth_headers, db, test_user
+    ):
+        """Test that total_pages is calculated correctly for various scenarios."""
+        from app.models.inventory import InventoryItem
+
+        # Test with exactly divisible total
+        for i in range(6):
+            item = InventoryItem(
+                name=f"Item {i}",
+                description=f"Description {i}",
+                quantity=10,
+                user_id=test_user.id,
+            )
+            db.add(item)
+        db.commit()
+
+        response = client.get("/api/v1/inventory/?page_size=3", headers=auth_headers)
+        data = response.json()
+        assert data["total"] == 6
+        assert data["total_pages"] == 2
+
+        # Test with remainder
+        item = InventoryItem(
+            name="Extra Item",
+            description="Extra",
+            quantity=10,
+            user_id=test_user.id,
+        )
+        db.add(item)
+        db.commit()
+
+        response = client.get("/api/v1/inventory/?page_size=3", headers=auth_headers)
+        data = response.json()
+        assert data["total"] == 7
+        assert data["total_pages"] == 3
+
+    def test_pagination_empty_results(self, client, auth_headers):
+        """Test pagination with no items."""
+        response = client.get(
+            "/api/v1/inventory/?page=1&page_size=10", headers=auth_headers
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["total"] == 0
+        assert data["page"] == 1
+        assert data["page_size"] == 10
+        assert data["total_pages"] == 0
+        assert len(data["items"]) == 0
+
+    def test_pagination_single_page(self, client, auth_headers, db, test_user):
+        """Test pagination when all items fit in one page."""
+        from app.models.inventory import InventoryItem
+
+        # Create 3 items
+        for i in range(3):
+            item = InventoryItem(
+                name=f"Item {i}",
+                description=f"Description {i}",
+                quantity=25,
+                user_id=test_user.id,
+            )
+            db.add(item)
+        db.commit()
+
+        response = client.get("/api/v1/inventory/?page_size=10", headers=auth_headers)
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["total"] == 3
+        assert data["page"] == 1
+        assert data["page_size"] == 10
+        assert data["total_pages"] == 1
+        assert len(data["items"]) == 3
+
+    def test_pagination_exceeds_max_page_size(
+        self, client, auth_headers, db, test_user
+    ):
+        """Test that page_size is capped at maximum limit."""
+        from app.models.inventory import InventoryItem
+
+        # Create several items
+        for i in range(10):
+            item = InventoryItem(
+                name=f"Item {i}",
+                description=f"Description {i}",
+                quantity=50,
+                user_id=test_user.id,
+            )
+            db.add(item)
+        db.commit()
+
+        # Request page_size larger than MAX_PAGE_SIZE (100)
+        response = client.get("/api/v1/inventory/?page_size=200", headers=auth_headers)
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        # Should be capped at MAX_PAGE_SIZE (100)
+        assert data["page_size"] == 100
+        assert len(data["items"]) == 10  # All items returned
+
+    def test_pagination_with_search_and_filters(
+        self, client, auth_headers, db, test_user
+    ):
+        """Test pagination combined with search and filters."""
+        from app.models.inventory import InventoryItem
+
+        # Create items with varying names
+        for i in range(8):
+            item = InventoryItem(
+                name=f"Widget {i}" if i % 2 == 0 else f"Gadget {i}",
+                description=f"Description {i}",
+                quantity=100 if i < 4 else 5,  # Some in stock, some low stock
+                low_stock_threshold=10,
+                user_id=test_user.id,
+            )
+            db.add(item)
+        db.commit()
+
+        # Test pagination with search
+        response = client.get(
+            "/api/v1/inventory/?search=Widget&page_size=2", headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["total"] == 4  # 4 Widgets
+        assert data["total_pages"] == 2
+        assert len(data["items"]) == 2
+        assert all("Widget" in item["name"] for item in data["items"])
+
+        # Test pagination with stock status filter
+        response = client.get(
+            "/api/v1/inventory/?stock_status=low_stock&page_size=3",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["total"] == 4  # 4 low stock items
+        assert data["total_pages"] == 2
+        assert len(data["items"]) == 3
+
+        # Test pagination with combined filters
+        response = client.get(
+            "/api/v1/inventory/?search=Gadget&stock_status=low_stock&page_size=2",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["total"] == 2  # 2 low stock Gadgets
+        assert data["total_pages"] == 1
+        assert len(data["items"]) == 2

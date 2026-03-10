@@ -33,6 +33,58 @@ def create_inventory_item(
     return db_item
 
 
+def _build_inventory_query(
+    db: Session,
+    user_id: int,
+    category_id: Optional[int] = None,
+    search: Optional[str] = None,
+    stock_status: Optional[str] = None,
+):
+    """Build base query with filters for inventory items."""
+    query = db.query(InventoryItem).filter(InventoryItem.user_id == user_id)
+
+    if category_id is not None:
+        query = query.filter(InventoryItem.category_id == category_id)
+
+    if search:
+        query = query.filter(InventoryItem.name.ilike(f"%{search}%"))
+
+    if stock_status:
+        if stock_status == "out_of_stock":
+            query = query.filter(InventoryItem.quantity == 0)
+        elif stock_status == "low_stock":
+            query = query.filter(
+                and_(
+                    InventoryItem.quantity > 0,
+                    InventoryItem.quantity < InventoryItem.low_stock_threshold,
+                )
+            )
+        elif stock_status == "in_stock":
+            query = query.filter(
+                or_(
+                    InventoryItem.quantity >= InventoryItem.low_stock_threshold,
+                    and_(
+                        InventoryItem.quantity > 0,
+                        InventoryItem.low_stock_threshold.is_(None),
+                    ),
+                )
+            )
+
+    return query
+
+
+def get_user_inventory_items_count(
+    db: Session,
+    user_id: int,
+    category_id: Optional[int] = None,
+    search: Optional[str] = None,
+    stock_status: Optional[str] = None,
+) -> int:
+    """Get total count of inventory items for a user with filters applied."""
+    query = _build_inventory_query(db, user_id, category_id, search, stock_status)
+    return query.count()
+
+
 def get_user_inventory_items(
     db: Session,
     user_id: int,
@@ -45,41 +97,7 @@ def get_user_inventory_items(
     sort_order: str = "desc",
 ) -> List[InventoryItem]:
     """Get all inventory items for a user with optional search, filters, and sorting."""
-    # Build base query filtered by user
-    query = db.query(InventoryItem).filter(InventoryItem.user_id == user_id)
-
-    # Add category filter if provided
-    if category_id is not None:
-        query = query.filter(InventoryItem.category_id == category_id)
-
-    # Add search filter if provided (case-insensitive name search)
-    if search:
-        query = query.filter(InventoryItem.name.ilike(f"%{search}%"))
-
-    # Add stock status filter if provided
-    if stock_status:
-        if stock_status == "out_of_stock":
-            # Items with zero quantity
-            query = query.filter(InventoryItem.quantity == 0)
-        elif stock_status == "low_stock":
-            # Items with quantity > 0 but below threshold
-            query = query.filter(
-                and_(
-                    InventoryItem.quantity > 0,
-                    InventoryItem.quantity < InventoryItem.low_stock_threshold,
-                )
-            )
-        elif stock_status == "in_stock":
-            # Items with quantity at or above threshold (or > 0 if no threshold)
-            query = query.filter(
-                or_(
-                    InventoryItem.quantity >= InventoryItem.low_stock_threshold,
-                    and_(
-                        InventoryItem.quantity > 0,
-                        InventoryItem.low_stock_threshold.is_(None),
-                    ),
-                )
-            )
+    query = _build_inventory_query(db, user_id, category_id, search, stock_status)
 
     # Apply sorting
     sort_column = getattr(InventoryItem, sort_by, InventoryItem.created_at)

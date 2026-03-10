@@ -41,6 +41,11 @@ def get_user_categories(
     )
 
 
+def get_user_categories_count(db: Session, user_id: int) -> int:
+    """Get total count of categories for a specific user."""
+    return db.query(Category).filter(Category.user_id == user_id).count()
+
+
 def get_category_by_id(
     db: Session, category_id: int, user_id: int
 ) -> Optional[Category]:
