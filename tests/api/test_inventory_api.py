@@ -1209,9 +1209,7 @@ class TestInventoryPagination:
             db.add(item)
         db.commit()
 
-        response = client.get(
-            "/api/v1/inventory/?page_size=3", headers=auth_headers
-        )
+        response = client.get("/api/v1/inventory/?page_size=3", headers=auth_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -1341,9 +1339,7 @@ class TestInventoryPagination:
             db.add(item)
         db.commit()
 
-        response = client.get(
-            "/api/v1/inventory/?page_size=3", headers=auth_headers
-        )
+        response = client.get("/api/v1/inventory/?page_size=3", headers=auth_headers)
         data = response.json()
         assert data["total"] == 6
         assert data["total_pages"] == 2
@@ -1358,9 +1354,7 @@ class TestInventoryPagination:
         db.add(item)
         db.commit()
 
-        response = client.get(
-            "/api/v1/inventory/?page_size=3", headers=auth_headers
-        )
+        response = client.get("/api/v1/inventory/?page_size=3", headers=auth_headers)
         data = response.json()
         assert data["total"] == 7
         assert data["total_pages"] == 3
@@ -1394,9 +1388,7 @@ class TestInventoryPagination:
             db.add(item)
         db.commit()
 
-        response = client.get(
-            "/api/v1/inventory/?page_size=10", headers=auth_headers
-        )
+        response = client.get("/api/v1/inventory/?page_size=10", headers=auth_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -1406,7 +1398,9 @@ class TestInventoryPagination:
         assert data["total_pages"] == 1
         assert len(data["items"]) == 3
 
-    def test_pagination_exceeds_max_page_size(self, client, auth_headers, db, test_user):
+    def test_pagination_exceeds_max_page_size(
+        self, client, auth_headers, db, test_user
+    ):
         """Test that page_size is capped at maximum limit."""
         from app.models.inventory import InventoryItem
 
@@ -1422,9 +1416,7 @@ class TestInventoryPagination:
         db.commit()
 
         # Request page_size larger than MAX_PAGE_SIZE (100)
-        response = client.get(
-            "/api/v1/inventory/?page_size=200", headers=auth_headers
-        )
+        response = client.get("/api/v1/inventory/?page_size=200", headers=auth_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -1463,7 +1455,8 @@ class TestInventoryPagination:
 
         # Test pagination with stock status filter
         response = client.get(
-            "/api/v1/inventory/?stock_status=low_stock&page_size=3", headers=auth_headers
+            "/api/v1/inventory/?stock_status=low_stock&page_size=3",
+            headers=auth_headers,
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()

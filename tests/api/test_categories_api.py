@@ -287,9 +287,7 @@ class TestCategoryPagination:
             db.add(category)
         db.commit()
 
-        response = client.get(
-            "/api/v1/categories/?page_size=3", headers=auth_headers
-        )
+        response = client.get("/api/v1/categories/?page_size=3", headers=auth_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -374,9 +372,7 @@ class TestCategoryPagination:
         db.commit()
 
         # Request with page_size=3 should give 3 pages (3, 3, 1)
-        response = client.get(
-            "/api/v1/categories/?page_size=3", headers=auth_headers
-        )
+        response = client.get("/api/v1/categories/?page_size=3", headers=auth_headers)
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["total"] == 7

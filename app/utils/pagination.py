@@ -1,8 +1,9 @@
 """Pagination utilities for API endpoints."""
 
-from typing import Generic, List, TypeVar
-from pydantic import BaseModel, Field
 import math
+from typing import Generic, List, TypeVar
+
+from pydantic import BaseModel, Field
 
 T = TypeVar("T")
 

@@ -1,6 +1,6 @@
 """Category management API routes."""
 
-from typing import Annotated, List, Optional
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -8,13 +8,11 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_current_active_user
 from app.models.user import User
-from app.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
+from app.schemas.category import (CategoryCreate, CategoryResponse,
+                                  CategoryUpdate)
 from app.services import category_service
-from app.utils.pagination import (
-    PaginatedResponse,
-    calculate_total_pages,
-    get_pagination_params,
-)
+from app.utils.pagination import (PaginatedResponse, calculate_total_pages,
+                                  get_pagination_params)
 
 router = APIRouter(prefix="/categories", tags=["categories"])
 
@@ -35,13 +33,17 @@ def get_categories(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     page: Optional[int] = Query(None, ge=1, description="Page number (1-indexed)"),
-    page_size: Optional[int] = Query(None, ge=1, description="Number of items per page"),
+    page_size: Optional[int] = Query(
+        None, ge=1, description="Number of items per page"
+    ),
     skip: int = Query(0, ge=0, description="Number of items to skip"),
     limit: int = Query(100, ge=1, le=100, description="Number of items per page"),
 ):
     """Get all categories for the authenticated user with pagination metadata."""
     # Get pagination parameters (supports both page/page_size and skip/limit)
-    offset, final_page_size = get_pagination_params(page=page, skip=skip, limit=limit, page_size=page_size)
+    offset, final_page_size = get_pagination_params(
+        page=page, skip=skip, limit=limit, page_size=page_size
+    )
 
     # Get categories and total count
     categories = category_service.get_user_categories(
