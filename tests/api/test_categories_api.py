@@ -269,6 +269,168 @@ class TestDeleteCategory:
         data = response.json()
         assert data["detail"] == "Category not found"
 
+
+class TestCategoryPagination:
+    """Test pagination functionality for category endpoints."""
+
+    def test_pagination_metadata_structure(self, client, auth_headers, db, test_user):
+        """Test that paginated response includes correct metadata structure."""
+        from app.models.category import Category
+
+        # Create multiple categories
+        for i in range(5):
+            category = Category(
+                name=f"Category {i}",
+                description=f"Description {i}",
+                user_id=test_user.id,
+            )
+            db.add(category)
+        db.commit()
+
+        response = client.get(
+            "/api/v1/categories/?page_size=3", headers=auth_headers
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+
+        # Verify response structure
+        assert "items" in data
+        assert "total" in data
+        assert "page" in data
+        assert "page_size" in data
+        assert "total_pages" in data
+
+        # Verify metadata values
+        assert data["total"] == 5
+        assert data["page"] == 1
+        assert data["page_size"] == 3
+        assert data["total_pages"] == 2
+        assert len(data["items"]) == 3
+
+    def test_pagination_with_page_parameter(self, client, auth_headers, db, test_user):
+        """Test navigating through pages using page parameter."""
+        from app.models.category import Category
+
+        # Create 10 categories
+        for i in range(10):
+            category = Category(
+                name=f"Category {i:02d}",
+                description=f"Description {i}",
+                user_id=test_user.id,
+            )
+            db.add(category)
+        db.commit()
+
+        # Get first page
+        response = client.get(
+            "/api/v1/categories/?page=1&page_size=4", headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_200_OK
+        page1_data = response.json()
+        assert page1_data["page"] == 1
+        assert page1_data["page_size"] == 4
+        assert page1_data["total"] == 10
+        assert page1_data["total_pages"] == 3
+        assert len(page1_data["items"]) == 4
+
+        # Get second page
+        response = client.get(
+            "/api/v1/categories/?page=2&page_size=4", headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_200_OK
+        page2_data = response.json()
+        assert page2_data["page"] == 2
+        assert len(page2_data["items"]) == 4
+
+        # Get third page (partial)
+        response = client.get(
+            "/api/v1/categories/?page=3&page_size=4", headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_200_OK
+        page3_data = response.json()
+        assert page3_data["page"] == 3
+        assert len(page3_data["items"]) == 2
+
+        # Verify categories are different across pages
+        page1_ids = {item["id"] for item in page1_data["items"]}
+        page2_ids = {item["id"] for item in page2_data["items"]}
+        page3_ids = {item["id"] for item in page3_data["items"]}
+        assert len(page1_ids & page2_ids) == 0  # No overlap
+        assert len(page2_ids & page3_ids) == 0  # No overlap
+
+    def test_pagination_multiple_pages(self, client, auth_headers, db, test_user):
+        """Test pagination with items spanning multiple pages."""
+        from app.models.category import Category
+
+        # Create 7 categories
+        for i in range(7):
+            category = Category(
+                name=f"Category {i}",
+                description=f"Description {i}",
+                user_id=test_user.id,
+            )
+            db.add(category)
+        db.commit()
+
+        # Request with page_size=3 should give 3 pages (3, 3, 1)
+        response = client.get(
+            "/api/v1/categories/?page_size=3", headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["total"] == 7
+        assert data["page_size"] == 3
+        assert data["total_pages"] == 3
+        assert len(data["items"]) == 3
+
+        # Get last page
+        response = client.get(
+            "/api/v1/categories/?page=3&page_size=3", headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["page"] == 3
+        assert len(data["items"]) == 1
+
+    def test_pagination_default_page_size(self, client, auth_headers, db, test_user):
+        """Test that default page_size is applied when not specified."""
+        from app.models.category import Category
+
+        # Create 5 categories
+        for i in range(5):
+            category = Category(
+                name=f"Category {i}",
+                description=f"Description {i}",
+                user_id=test_user.id,
+            )
+            db.add(category)
+        db.commit()
+
+        # Request without page_size should use default (100)
+        response = client.get("/api/v1/categories/", headers=auth_headers)
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["page"] == 1
+        assert data["page_size"] == 100  # DEFAULT_PAGE_SIZE
+        assert data["total"] == 5
+        assert data["total_pages"] == 1
+        assert len(data["items"]) == 5
+
+    def test_pagination_empty_results(self, client, auth_headers):
+        """Test pagination with no categories."""
+        response = client.get(
+            "/api/v1/categories/?page=1&page_size=10", headers=auth_headers
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["total"] == 0
+        assert data["page"] == 1
+        assert data["page_size"] == 10
+        assert data["total_pages"] == 0
+        assert len(data["items"]) == 0
+
     def test_delete_category_with_items(self, client, auth_headers, db, test_user):
         """Test that category with items cannot be deleted."""
         from app.models.category import Category
