@@ -300,3 +300,37 @@ class TestLowStockThresholdChanges:
 
         assert result.quantity == 13
         assert result.is_low_stock is False
+
+
+class TestStockOwnershipValidation:
+    """Test that stock operations respect user ownership."""
+
+    def test_cannot_adjust_other_user_item(
+        self, db, test_user, other_user, test_inventory_item
+    ):
+        """Test that users cannot adjust stock for items they don't own."""
+        original_quantity = test_inventory_item.quantity
+
+        result = inventory_service.adjust_stock_quantity(
+            db=db,
+            item_id=test_inventory_item.id,
+            quantity_change=10,
+            user_id=other_user.id,  # Different user
+        )
+
+        assert result is None
+
+        # Verify quantity was not changed
+        db.refresh(test_inventory_item)
+        assert test_inventory_item.quantity == original_quantity
+
+    def test_adjust_nonexistent_item_returns_none(self, db, test_user):
+        """Test that adjusting non-existent item returns None."""
+        result = inventory_service.adjust_stock_quantity(
+            db=db,
+            item_id=999999,  # Non-existent
+            quantity_change=10,
+            user_id=test_user.id,
+        )
+
+        assert result is None
