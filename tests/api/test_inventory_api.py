@@ -693,3 +693,65 @@ class TestCombinedFiltersAndSearch:
         assert names[0] == "Green Tool"
         assert names[1] == "Mini Widget"
         assert names[2] == "Orange Supply"
+
+
+class TestStockIncrementAPI:
+    """Test stock increment endpoint."""
+
+    def test_increment_stock_success(self, client, auth_headers, test_inventory_item):
+        """Test successful stock increment operation."""
+        original_quantity = test_inventory_item.quantity
+        
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/increment",
+            json={"quantity_change": 10, "reason": "Restock"},
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["id"] == test_inventory_item.id
+        assert data["quantity"] == original_quantity + 10
+        assert "is_low_stock" in data
+        assert "updated_at" in data
+
+    def test_increment_stock_updates_quantity_correctly(
+        self, client, auth_headers, test_inventory_item, db
+    ):
+        """Test that increment updates quantity correctly in response."""
+        # Set initial quantity
+        test_inventory_item.quantity = 10
+        db.commit()
+        
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/increment",
+            json={"quantity_change": 5},
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["quantity"] == 15
+        
+        # Verify the change persisted
+        verify_response = client.get(
+            f"/api/v1/inventory/{test_inventory_item.id}",
+            headers=auth_headers,
+        )
+        assert verify_response.status_code == status.HTTP_200_OK
+        assert verify_response.json()["quantity"] == 15
+
+    def test_increment_with_reason(self, client, auth_headers, test_inventory_item):
+        """Test that increment accepts optional reason field."""
+        original_quantity = test_inventory_item.quantity
+        
+        response = client.post(
+            f"/api/v1/inventory/{test_inventory_item.id}/increment",
+            json={"quantity_change": 10, "reason": "Quarterly restock"},
+            headers=auth_headers,
+        )
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["quantity"] == original_quantity + 10
+        # Reason is accepted and logged (for future audit functionality)
