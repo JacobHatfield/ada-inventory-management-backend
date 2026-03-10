@@ -83,20 +83,23 @@ class TestGetCategories:
         response = client.get("/api/v1/categories/", headers=auth_headers)
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert isinstance(data, list)
-        assert len(data) == 3
-        assert all(cat["user_id"] == test_user.id for cat in data)
+        assert "items" in data
+        assert "total" in data
+        assert data["total"] == 3
+        assert len(data["items"]) == 3
+        assert all(cat["user_id"] == test_user.id for cat in data["items"])
         # Verify ordered by name (alphabetically)
-        assert data[0]["name"] == "Category A"
-        assert data[1]["name"] == "Category B"
-        assert data[2]["name"] == "Category C"
+        assert data["items"][0]["name"] == "Category A"
+        assert data["items"][1]["name"] == "Category B"
+        assert data["items"][2]["name"] == "Category C"
 
     def test_get_categories_empty_list(self, client, auth_headers):
         """Test retrieving empty category list."""
         response = client.get("/api/v1/categories/", headers=auth_headers)
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data == []
+        assert data["items"] == []
+        assert data["total"] == 0
 
     def test_get_categories_only_own_categories(
         self, client, auth_headers, db, test_user, other_user
@@ -127,11 +130,12 @@ class TestGetCategories:
         response = client.get("/api/v1/categories/", headers=auth_headers)
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 2
+        assert data["total"] == 2
+        assert len(data["items"]) == 2
         # Verify all categories belong to test_user
-        assert all(cat["user_id"] == test_user.id for cat in data)
+        assert all(cat["user_id"] == test_user.id for cat in data["items"])
         # Verify none belong to other_user
-        assert all(cat["user_id"] != other_user.id for cat in data)
+        assert all(cat["user_id"] != other_user.id for cat in data["items"])
 
 
 class TestGetCategoryById:

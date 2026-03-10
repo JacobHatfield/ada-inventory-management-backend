@@ -1,8 +1,8 @@
 """Category management API routes."""
 
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -10,6 +10,11 @@ from app.dependencies import get_current_active_user
 from app.models.user import User
 from app.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
 from app.services import category_service
+from app.utils.pagination import (
+    PaginatedResponse,
+    calculate_total_pages,
+    get_pagination_params,
+)
 
 router = APIRouter(prefix="/categories", tags=["categories"])
 
@@ -25,16 +30,35 @@ def create_category(
     return category
 
 
-@router.get("/", response_model=List[CategoryResponse])
+@router.get("/", response_model=PaginatedResponse[CategoryResponse])
 def get_categories(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
-    skip: int = 0,
-    limit: int = 100,
+    page: Optional[int] = Query(None, ge=1, description="Page number (1-indexed)"),
+    skip: int = Query(0, ge=0, description="Number of items to skip"),
+    limit: int = Query(100, ge=1, le=100, description="Number of items per page"),
 ):
-    """Get all categories for the authenticated user."""
-    categories = category_service.get_user_categories(db, current_user.id, skip, limit)
-    return categories
+    """Get all categories for the authenticated user with pagination metadata."""
+    # Get pagination parameters (supports both page and skip/limit)
+    offset, page_size = get_pagination_params(page=page, skip=skip, limit=limit)
+
+    # Get categories and total count
+    categories = category_service.get_user_categories(
+        db, current_user.id, offset, page_size
+    )
+    total = category_service.get_user_categories_count(db, current_user.id)
+
+    # Calculate pagination metadata
+    total_pages = calculate_total_pages(total, page_size)
+    current_page = (offset // page_size) + 1 if offset >= 0 else 1
+
+    return {
+        "items": categories,
+        "total": total,
+        "page": current_page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+    }
 
 
 @router.get("/{category_id}", response_model=CategoryResponse)
