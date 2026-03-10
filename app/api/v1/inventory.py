@@ -12,6 +12,7 @@ from app.schemas.inventory import (
     InventoryItemCreate,
     InventoryItemResponse,
     InventoryItemUpdate,
+    StockUpdate,
 )
 from app.services import inventory_service
 
@@ -125,3 +126,72 @@ def delete_inventory_item(
             detail="Inventory item not found",
         )
     return None
+
+
+@router.post("/{item_id}/increment", response_model=InventoryItemResponse)
+def increment_stock(
+    item_id: int,
+    stock_update: StockUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """
+    Increment stock quantity for an inventory item.
+
+    Add a specified amount to the current stock quantity.
+    Optionally provide a reason for the stock change for audit purposes.
+    """
+    try:
+        item = inventory_service.adjust_stock_quantity(
+            db,
+            item_id,
+            stock_update.quantity_change,
+            current_user.id,
+            stock_update.reason,
+        )
+        if not item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Inventory item not found",
+            )
+        return item
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+@router.post("/{item_id}/decrement", response_model=InventoryItemResponse)
+def decrement_stock(
+    item_id: int,
+    stock_update: StockUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """
+    Decrement stock quantity for an inventory item.
+
+    Remove a specified amount from the current stock quantity.
+    Prevents negative stock - returns 400 error if operation would result in negative quantity.
+    Optionally provide a reason for the stock change for audit purposes.
+    """
+    try:
+        item = inventory_service.adjust_stock_quantity(
+            db,
+            item_id,
+            -stock_update.quantity_change,  # Negative to decrement
+            current_user.id,
+            stock_update.reason,
+        )
+        if not item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Inventory item not found",
+            )
+        return item
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )

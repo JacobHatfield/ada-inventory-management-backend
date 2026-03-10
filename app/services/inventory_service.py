@@ -127,6 +127,37 @@ def update_inventory_item(
     return db_item
 
 
+def adjust_stock_quantity(
+    db: Session,
+    item_id: int,
+    quantity_change: int,
+    user_id: int,
+    reason: Optional[str] = None,
+) -> Optional[InventoryItem]:
+    """Adjust inventory item quantity, preventing negative stock. Returns None if item not found, raises ValueError if would result in negative quantity."""
+    # Get item with ownership verification
+    db_item = get_inventory_item_by_id(db, item_id, user_id)
+    if not db_item:
+        return None
+    
+    # Calculate new quantity
+    new_quantity = db_item.quantity + quantity_change
+    
+    # Validate that new quantity is not negative
+    if new_quantity < 0:
+        raise ValueError(
+            f"Cannot adjust quantity: would result in negative stock "
+            f"(current: {db_item.quantity}, change: {quantity_change})"
+        )
+    
+    # Update the quantity
+    db_item.quantity = new_quantity
+    
+    db.commit()
+    db.refresh(db_item)
+    return db_item
+
+
 def delete_inventory_item(db: Session, item_id: int, user_id: int) -> bool:
     """Delete an inventory item, verifying ownership."""
     # Get item with ownership check

@@ -86,8 +86,8 @@ class TestStockUpdateSchema:
 
         errors = exc_info.value.errors()
         assert len(errors) == 1
-        assert errors[0]["type"] == "value_error"
-        assert "cannot be zero" in str(errors[0]["ctx"]["error"])
+        # Field constraint gt=0 catches zero and negative values
+        assert errors[0]["type"] == "greater_than"
 
     def test_validate_quantity_change_positive(self):
         """Test that positive quantity_change is valid."""
@@ -95,6 +95,11 @@ class TestStockUpdateSchema:
         assert stock_update.quantity_change == 10
 
     def test_validate_quantity_change_negative(self):
-        """Test that negative quantity_change is valid."""
-        stock_update = StockUpdate(quantity_change=-5)
-        assert stock_update.quantity_change == -5
+        """Test that negative quantity_change is rejected (users provide positive values)."""
+        with pytest.raises(ValidationError) as exc_info:
+            StockUpdate(quantity_change=-5)
+        
+        errors = exc_info.value.errors()
+        assert len(errors) == 1
+        # Field constraint gt=0 rejects negative values
+        assert errors[0]["type"] == "greater_than"
