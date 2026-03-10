@@ -35,28 +35,29 @@ def get_categories(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     page: Optional[int] = Query(None, ge=1, description="Page number (1-indexed)"),
+    page_size: Optional[int] = Query(None, ge=1, description="Number of items per page"),
     skip: int = Query(0, ge=0, description="Number of items to skip"),
     limit: int = Query(100, ge=1, le=100, description="Number of items per page"),
 ):
     """Get all categories for the authenticated user with pagination metadata."""
-    # Get pagination parameters (supports both page and skip/limit)
-    offset, page_size = get_pagination_params(page=page, skip=skip, limit=limit)
+    # Get pagination parameters (supports both page/page_size and skip/limit)
+    offset, final_page_size = get_pagination_params(page=page, skip=skip, limit=limit, page_size=page_size)
 
     # Get categories and total count
     categories = category_service.get_user_categories(
-        db, current_user.id, offset, page_size
+        db, current_user.id, offset, final_page_size
     )
     total = category_service.get_user_categories_count(db, current_user.id)
 
     # Calculate pagination metadata
-    total_pages = calculate_total_pages(total, page_size)
-    current_page = (offset // page_size) + 1 if offset >= 0 else 1
+    total_pages = calculate_total_pages(total, final_page_size)
+    current_page = (offset // final_page_size) + 1 if offset >= 0 else 1
 
     return {
         "items": categories,
         "total": total,
         "page": current_page,
-        "page_size": page_size,
+        "page_size": final_page_size,
         "total_pages": total_pages,
     }
 

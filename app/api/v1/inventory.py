@@ -48,6 +48,7 @@ def get_inventory_items(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     page: Optional[int] = Query(None, ge=1, description="Page number (1-indexed)"),
+    page_size: Optional[int] = Query(None, ge=1, description="Number of items per page"),
     skip: int = Query(0, ge=0, description="Number of items to skip (offset)"),
     limit: int = Query(100, ge=1, le=100, description="Maximum items per page"),
     category_id: Optional[int] = Query(None, description="Filter by category ID"),
@@ -63,8 +64,8 @@ def get_inventory_items(
     sort_order: Literal["asc", "desc"] = Query("desc", description="Sort order"),
 ):
     """Get all inventory items with pagination, search, filters, and sorting."""
-    # Get pagination parameters (supports both page and skip/limit)
-    offset, page_size = get_pagination_params(page=page, skip=skip, limit=limit)
+    # Get pagination parameters (supports both page/page_size and skip/limit)
+    offset, final_page_size = get_pagination_params(page=page, skip=skip, limit=limit, page_size=page_size)
 
     # Get total count with filters applied
     total_count = inventory_service.get_user_inventory_items_count(
@@ -76,7 +77,7 @@ def get_inventory_items(
         db,
         current_user.id,
         offset,
-        page_size,
+        final_page_size,
         category_id,
         search,
         stock_status,
@@ -85,14 +86,14 @@ def get_inventory_items(
     )
 
     # Calculate pagination metadata
-    total_pages = calculate_total_pages(total_count, page_size)
-    current_page = (offset // page_size) + 1 if offset >= 0 else 1
+    total_pages = calculate_total_pages(total_count, final_page_size)
+    current_page = (offset // final_page_size) + 1 if offset >= 0 else 1
 
     return PaginatedResponse(
         items=items,
         total=total_count,
         page=current_page,
-        page_size=page_size,
+        page_size=final_page_size,
         total_pages=total_pages,
     )
 
