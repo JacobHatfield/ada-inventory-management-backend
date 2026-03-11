@@ -1,7 +1,7 @@
 """Unit tests for email service."""
 
 import smtplib
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -165,7 +165,9 @@ class TestEmailSending:
         mock_settings.SMTP_FROM_EMAIL = "noreply@example.com"
         mock_settings.SMTP_FROM_NAME = "Test System"
 
-        mock_smtp_class.side_effect = smtplib.SMTPConnectError(421, b"Service unavailable")
+        mock_smtp_class.side_effect = smtplib.SMTPConnectError(
+            421, b"Service unavailable"
+        )
 
         result = await email_service.send_email(
             to_email="recipient@example.com",
