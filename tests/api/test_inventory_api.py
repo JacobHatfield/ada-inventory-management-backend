@@ -1532,9 +1532,10 @@ class TestAuditHistoryEndpoint:
         self, client, auth_headers, db, test_user
     ):
         """Test pagination using page and page_size parameters."""
+        import time
+
         from app.models.inventory import InventoryItem
         from app.services import audit_service
-        import time
 
         # Create an item
         item = InventoryItem(
@@ -1602,7 +1603,10 @@ class TestAuditHistoryEndpoint:
 
         # Create an item
         item = InventoryItem(
-            name="Skip Limit Item", description="Test", quantity=50, user_id=test_user.id
+            name="Skip Limit Item",
+            description="Test",
+            quantity=50,
+            user_id=test_user.id,
         )
         db.add(item)
         db.commit()
@@ -1699,9 +1703,9 @@ class TestAuditHistoryEndpoint:
         self, client, auth_headers, db, test_user
     ):
         """Test that users cannot access audit history of other users' items."""
+        from app.core.security import hash_password
         from app.models.inventory import InventoryItem
         from app.models.user import User
-        from app.core.security import hash_password
 
         # Create another user
         other_user = User(
@@ -1736,9 +1740,10 @@ class TestAuditHistoryEndpoint:
         self, client, auth_headers, db, test_user
     ):
         """Test that audit logs are returned in reverse chronological order."""
+        import time
+
         from app.models.inventory import InventoryItem
         from app.services import audit_service
-        import time
 
         # Create an item
         item = InventoryItem(
@@ -1939,9 +1944,7 @@ class TestAuditHistoryEndpoint:
         from app.models.audit import AuditLog
 
         logs_after_delete = (
-            db.query(AuditLog)
-            .filter(AuditLog.inventory_item_id == item_id)
-            .all()
+            db.query(AuditLog).filter(AuditLog.inventory_item_id == item_id).all()
         )
         # Logs should be cascade deleted with the item
         assert len(logs_after_delete) == 0
@@ -2009,8 +2012,8 @@ class TestAuditHistoryEndpoint:
 
     def test_multi_user_audit_separation(self, client, auth_headers, db, test_user):
         """Test end-to-end: Verify audit logs are properly separated between users."""
-        from app.models.user import User
         from app.core.security import hash_password
+        from app.models.user import User
 
         # Create a second user
         second_user = User(

@@ -39,13 +39,15 @@ def create_inventory_item(
         inventory_item_id=db_item.id,
         user_id=user_id,
         action="created",
-        new_value=json.dumps({
-            "name": db_item.name,
-            "quantity": db_item.quantity,
-            "description": db_item.description,
-            "category_id": db_item.category_id,
-            "low_stock_threshold": db_item.low_stock_threshold,
-        }),
+        new_value=json.dumps(
+            {
+                "name": db_item.name,
+                "quantity": db_item.quantity,
+                "description": db_item.description,
+                "category_id": db_item.category_id,
+                "low_stock_threshold": db_item.low_stock_threshold,
+            }
+        ),
     )
 
     return db_item
@@ -187,24 +189,24 @@ def adjust_stock_quantity(
     db_item = get_inventory_item_by_id(db, item_id, user_id)
     if not db_item:
         return None
-    
+
     # Calculate new quantity
     old_quantity = db_item.quantity
     new_quantity = old_quantity + quantity_change
-    
+
     # Validate that new quantity is not negative
     if new_quantity < 0:
         raise ValueError(
             f"Cannot adjust quantity: would result in negative stock "
             f"(current: {old_quantity}, change: {quantity_change})"
         )
-    
+
     # Update the quantity
     db_item.quantity = new_quantity
-    
+
     # Determine action type
     action = "stock_increased" if quantity_change > 0 else "stock_decreased"
-    
+
     # Log stock adjustment
     audit_service.create_audit_log(
         db=db,
@@ -213,12 +215,18 @@ def adjust_stock_quantity(
         action=action,
         field_name="quantity",
         old_value=str(old_quantity),
-        new_value=str(new_quantity) if reason is None else json.dumps({
-            "quantity": new_quantity,
-            "reason": reason,
-        }),
+        new_value=(
+            str(new_quantity)
+            if reason is None
+            else json.dumps(
+                {
+                    "quantity": new_quantity,
+                    "reason": reason,
+                }
+            )
+        ),
     )
-    
+
     db.commit()
     db.refresh(db_item)
     return db_item
@@ -237,12 +245,14 @@ def delete_inventory_item(db: Session, item_id: int, user_id: int) -> bool:
         inventory_item_id=db_item.id,
         user_id=user_id,
         action="deleted",
-        old_value=json.dumps({
-            "name": db_item.name,
-            "quantity": db_item.quantity,
-            "description": db_item.description,
-            "category_id": db_item.category_id,
-        }),
+        old_value=json.dumps(
+            {
+                "name": db_item.name,
+                "quantity": db_item.quantity,
+                "description": db_item.description,
+                "category_id": db_item.category_id,
+            }
+        ),
     )
 
     # Delete item (cascade will handle audit logs)

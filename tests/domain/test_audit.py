@@ -3,11 +3,10 @@
 import json
 import time
 
-import pytest
 
 from app.models.audit import AuditLog
-from app.services import audit_service, inventory_service
 from app.schemas.inventory import InventoryItemCreate, InventoryItemUpdate
+from app.services import audit_service, inventory_service
 
 
 class TestAuditServiceFunctions:
@@ -50,8 +49,7 @@ class TestAuditServiceFunctions:
         self, db, test_user, test_inventory_item
     ):
         """Test that audit logs are returned sorted by timestamp (newest first)."""
-        import time
-        
+
         # Create multiple audit logs with slight delays to ensure different timestamps
         audit_service.create_audit_log(
             db, test_inventory_item.id, test_user.id, "created"
@@ -168,17 +166,13 @@ class TestItemCreationAudit:
         item = inventory_service.create_inventory_item(db, item_data, test_user.id)
 
         # Get the audit log
-        log = (
-            db.query(AuditLog)
-            .filter(AuditLog.inventory_item_id == item.id)
-            .first()
-        )
+        log = db.query(AuditLog).filter(AuditLog.inventory_item_id == item.id).first()
 
         assert log is not None
         assert log.user_id == test_user.id
         assert log.inventory_item_id == item.id
         assert log.new_value is not None
-        
+
         # Parse JSON content
         log_data = json.loads(log.new_value)
         assert log_data["name"] == "Logged Widget"
@@ -193,11 +187,7 @@ class TestItemCreationAudit:
 
         item = inventory_service.create_inventory_item(db, item_data, test_user.id)
 
-        log = (
-            db.query(AuditLog)
-            .filter(AuditLog.inventory_item_id == item.id)
-            .first()
-        )
+        log = db.query(AuditLog).filter(AuditLog.inventory_item_id == item.id).first()
 
         assert log.action == "created"
 
@@ -216,9 +206,7 @@ class TestItemCreationAudit:
         # Check each item has its own audit log
         for item in items:
             logs = (
-                db.query(AuditLog)
-                .filter(AuditLog.inventory_item_id == item.id)
-                .all()
+                db.query(AuditLog).filter(AuditLog.inventory_item_id == item.id).all()
             )
             assert len(logs) == 1
             assert logs[0].action == "created"
@@ -243,7 +231,9 @@ class TestItemUpdateAudit:
         )
         assert len(logs) >= 1
 
-    def test_update_item_logs_each_field_change(self, db, test_user, test_inventory_item):
+    def test_update_item_logs_each_field_change(
+        self, db, test_user, test_inventory_item
+    ):
         """Test that each field update creates a separate audit log."""
         update_data = InventoryItemUpdate(
             name="New Name",
@@ -506,8 +496,6 @@ class TestItemDeletionAudit:
     def test_delete_item_captures_final_state(self, db, test_user, test_inventory_item):
         """Test that deletion log captures the item's final state."""
         item_id = test_inventory_item.id
-        item_name = test_inventory_item.name
-        item_quantity = test_inventory_item.quantity
 
         # Create another item to query logs after deletion
         inventory_service.delete_inventory_item(db, item_id, test_user.id)
@@ -524,11 +512,12 @@ class TestItemDeletionAudit:
             quantity=50,
         )
         item = inventory_service.create_inventory_item(db, item_data, test_user.id)
-        
+
         # Delete and check logs before cascade
         from app.models.inventory import InventoryItem
+
         db_item = db.query(InventoryItem).filter(InventoryItem.id == item.id).first()
-        
+
         # Manually create delete log to test (simulating the service)
         audit_service.create_audit_log(
             db=db,
@@ -537,16 +526,13 @@ class TestItemDeletionAudit:
             action="deleted",
             old_value=json.dumps({"name": db_item.name}),
         )
-        
+
         log = (
             db.query(AuditLog)
-            .filter(
-                AuditLog.inventory_item_id == item.id,
-                AuditLog.action == "deleted"
-            )
+            .filter(AuditLog.inventory_item_id == item.id, AuditLog.action == "deleted")
             .first()
         )
-        
+
         assert log is not None
         assert log.action == "deleted"
 
@@ -555,23 +541,19 @@ class TestItemDeletionAudit:
         # Create an item
         item_data = InventoryItemCreate(name="Cascade Test", quantity=10)
         item = inventory_service.create_inventory_item(db, item_data, test_user.id)
-        
+
         # Verify audit log exists (from creation)
         logs_before = (
-            db.query(AuditLog)
-            .filter(AuditLog.inventory_item_id == item.id)
-            .count()
+            db.query(AuditLog).filter(AuditLog.inventory_item_id == item.id).count()
         )
         assert logs_before >= 1
-        
+
         # Delete the item
         inventory_service.delete_inventory_item(db, item.id, test_user.id)
-        
+
         # Verify audit logs were cascade deleted
         logs_after = (
-            db.query(AuditLog)
-            .filter(AuditLog.inventory_item_id == item.id)
-            .count()
+            db.query(AuditLog).filter(AuditLog.inventory_item_id == item.id).count()
         )
         assert logs_after == 0
 
@@ -598,9 +580,7 @@ class TestAuditEdgeCases:
 
     def test_audit_log_with_large_json_data(self, db, test_user, test_inventory_item):
         """Test audit log can handle large JSON data."""
-        large_data = {
-            "field_" + str(i): "value_" * 100 for i in range(50)
-        }
+        large_data = {"field_" + str(i): "value_" * 100 for i in range(50)}
         large_json = json.dumps(large_data)
 
         log = audit_service.create_audit_log(
@@ -619,17 +599,17 @@ class TestAuditEdgeCases:
 
     def test_audit_log_timestamp_accuracy(self, db, test_user, test_inventory_item):
         """Test that audit log timestamps are accurate."""
-        from datetime import datetime, timezone, timedelta
-        
+        from datetime import datetime, timedelta, timezone
+
         before = datetime.now(timezone.utc)
-        
+
         log = audit_service.create_audit_log(
             db=db,
             inventory_item_id=test_inventory_item.id,
             user_id=test_user.id,
             action="timestamp_test",
         )
-        
+
         after = datetime.now(timezone.utc)
 
         # Timestamp should be within reasonable range (allowing 1 second tolerance)
@@ -638,7 +618,7 @@ class TestAuditEdgeCases:
         if log_time.tzinfo is None:
             # If naive, assume UTC
             log_time = log_time.replace(tzinfo=timezone.utc)
-        
+
         # Check timestamp is within 1 second before and after
         assert before - timedelta(seconds=1) <= log_time <= after + timedelta(seconds=1)
 
@@ -647,21 +627,17 @@ class TestAuditEdgeCases:
         # Create an item
         item_data = InventoryItemCreate(name="Concurrent Test", quantity=100)
         item = inventory_service.create_inventory_item(db, item_data, test_user.id)
-        
+
         # Perform multiple operations rapidly
         inventory_service.adjust_stock_quantity(db, item.id, 10, test_user.id)
         inventory_service.adjust_stock_quantity(db, item.id, -5, test_user.id)
         inventory_service.update_inventory_item(
             db, item.id, InventoryItemUpdate(name="Updated Concurrent"), test_user.id
         )
-        
+
         # Check all operations were logged
-        logs = (
-            db.query(AuditLog)
-            .filter(AuditLog.inventory_item_id == item.id)
-            .all()
-        )
-        
+        logs = db.query(AuditLog).filter(AuditLog.inventory_item_id == item.id).all()
+
         # Should have: 1 create + 2 stock adjustments + 1 update = 4 logs
         assert len(logs) >= 4
 
@@ -672,7 +648,7 @@ class TestAuditEdgeCases:
             .filter(AuditLog.inventory_item_id == test_inventory_item.id)
             .count()
         )
-        
+
         # Try to decrement more than available (should fail)
         try:
             inventory_service.adjust_stock_quantity(
@@ -680,15 +656,12 @@ class TestAuditEdgeCases:
             )
         except ValueError:
             pass  # Expected to fail
-        
+
         # Verify no new audit log was created
         final_log_count = (
             db.query(AuditLog)
             .filter(AuditLog.inventory_item_id == test_inventory_item.id)
             .count()
         )
-        
+
         assert final_log_count == initial_log_count
-
-
-

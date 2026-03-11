@@ -9,11 +9,18 @@ from app.database import get_db
 from app.dependencies import get_current_active_user
 from app.models.user import User
 from app.schemas.audit import AuditLogResponse
-from app.schemas.inventory import (InventoryItemCreate, InventoryItemResponse,
-                                   InventoryItemUpdate, StockUpdate)
+from app.schemas.inventory import (
+    InventoryItemCreate,
+    InventoryItemResponse,
+    InventoryItemUpdate,
+    StockUpdate,
+)
 from app.services import audit_service, inventory_service
-from app.utils.pagination import (PaginatedResponse, calculate_total_pages,
-                                  get_pagination_params)
+from app.utils.pagination import (
+    PaginatedResponse,
+    calculate_total_pages,
+    get_pagination_params,
+)
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
@@ -222,7 +229,9 @@ def decrement_stock(
         )
 
 
-@router.get("/{item_id}/audit-history", response_model=PaginatedResponse[AuditLogResponse])
+@router.get(
+    "/{item_id}/audit-history", response_model=PaginatedResponse[AuditLogResponse]
+)
 def get_item_audit_history(
     item_id: int,
     db: Annotated[Session, Depends(get_db)],
