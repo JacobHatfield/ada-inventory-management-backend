@@ -8,11 +8,19 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_current_active_user
 from app.models.user import User
-from app.schemas.inventory import (InventoryItemCreate, InventoryItemResponse,
-                                   InventoryItemUpdate, StockUpdate)
-from app.services import inventory_service
-from app.utils.pagination import (PaginatedResponse, calculate_total_pages,
-                                  get_pagination_params)
+from app.schemas.audit import AuditLogResponse
+from app.schemas.inventory import (
+    InventoryItemCreate,
+    InventoryItemResponse,
+    InventoryItemUpdate,
+    StockUpdate,
+)
+from app.services import audit_service, inventory_service
+from app.utils.pagination import (
+    PaginatedResponse,
+    calculate_total_pages,
+    get_pagination_params,
+)
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
@@ -219,3 +227,52 @@ def decrement_stock(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+
+@router.get(
+    "/{item_id}/audit-history", response_model=PaginatedResponse[AuditLogResponse]
+)
+def get_item_audit_history(
+    item_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    page: Optional[int] = Query(None, ge=1, description="Page number (1-indexed)"),
+    page_size: Optional[int] = Query(
+        None, ge=1, description="Number of items per page"
+    ),
+    skip: int = Query(0, ge=0, description="Number of items to skip (offset)"),
+    limit: int = Query(100, ge=1, le=100, description="Maximum items per page"),
+):
+    """Get audit history for an inventory item with pagination."""
+    # Verify item exists and user owns it
+    item = inventory_service.get_inventory_item_by_id(db, item_id, current_user.id)
+    if not item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Inventory item not found",
+        )
+
+    # Get pagination parameters
+    offset, final_page_size = get_pagination_params(
+        page=page, skip=skip, limit=limit, page_size=page_size
+    )
+
+    # Get total count of audit logs
+    total_count = audit_service.get_audit_logs_count_for_item(db, item_id)
+
+    # Get audit logs for current page
+    audit_logs = audit_service.get_audit_logs_for_item(
+        db, item_id, skip=offset, limit=final_page_size
+    )
+
+    # Calculate pagination metadata
+    total_pages = calculate_total_pages(total_count, final_page_size)
+    current_page = (offset // final_page_size) + 1 if offset >= 0 else 1
+
+    return PaginatedResponse(
+        items=audit_logs,
+        total=total_count,
+        page=current_page,
+        page_size=final_page_size,
+        total_pages=total_pages,
+    )
