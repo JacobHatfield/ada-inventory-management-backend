@@ -1,12 +1,13 @@
 """Audit logging domain tests."""
 
 import json
+import time
 
 import pytest
 
 from app.models.audit import AuditLog
 from app.services import audit_service, inventory_service
-from app.schemas.inventory import InventoryItemCreate
+from app.schemas.inventory import InventoryItemCreate, InventoryItemUpdate
 
 
 class TestAuditServiceFunctions:
@@ -221,4 +222,271 @@ class TestItemCreationAudit:
             )
             assert len(logs) == 1
             assert logs[0].action == "created"
+
+
+class TestItemUpdateAudit:
+    """Test audit logging during item updates."""
+
+    def test_update_item_generates_audit_log(self, db, test_user, test_inventory_item):
+        """Test that updating an item generates audit logs."""
+        update_data = InventoryItemUpdate(name="Updated Widget")
+
+        inventory_service.update_inventory_item(
+            db, test_inventory_item.id, update_data, test_user.id
+        )
+
+        # Check audit log was created
+        logs = (
+            db.query(AuditLog)
+            .filter(AuditLog.inventory_item_id == test_inventory_item.id)
+            .all()
+        )
+        assert len(logs) >= 1
+
+    def test_update_item_logs_each_field_change(self, db, test_user, test_inventory_item):
+        """Test that each field update creates a separate audit log."""
+        update_data = InventoryItemUpdate(
+            name="New Name",
+            description="New Description",
+            quantity=200,
+        )
+
+        inventory_service.update_inventory_item(
+            db, test_inventory_item.id, update_data, test_user.id
+        )
+
+        # Get all audit logs for this item
+        logs = (
+            db.query(AuditLog)
+            .filter(AuditLog.inventory_item_id == test_inventory_item.id)
+            .all()
+        )
+
+        # Should have 3 logs (one for each changed field)
+        assert len(logs) == 3
+
+        # Verify each field has a log
+        field_names = [log.field_name for log in logs]
+        assert "name" in field_names
+        assert "description" in field_names
+        assert "quantity" in field_names
+
+    def test_update_item_no_log_if_no_change(self, db, test_user, test_inventory_item):
+        """Test that updating with the same values doesn't create audit logs."""
+        # Update with current values
+        update_data = InventoryItemUpdate(
+            name=test_inventory_item.name,
+            quantity=test_inventory_item.quantity,
+        )
+
+        inventory_service.update_inventory_item(
+            db, test_inventory_item.id, update_data, test_user.id
+        )
+
+        # No audit logs should be created
+        logs = (
+            db.query(AuditLog)
+            .filter(AuditLog.inventory_item_id == test_inventory_item.id)
+            .all()
+        )
+        assert len(logs) == 0
+
+    def test_update_multiple_fields_generates_multiple_logs(
+        self, db, test_user, test_inventory_item
+    ):
+        """Test that updating multiple fields generates multiple logs."""
+        update_data = InventoryItemUpdate(
+            name="Double Update",
+            low_stock_threshold=15,
+        )
+
+        inventory_service.update_inventory_item(
+            db, test_inventory_item.id, update_data, test_user.id
+        )
+
+        logs = (
+            db.query(AuditLog)
+            .filter(AuditLog.inventory_item_id == test_inventory_item.id)
+            .all()
+        )
+
+        # Should have 2 logs
+        assert len(logs) == 2
+        assert all(log.action == "updated" for log in logs)
+
+    def test_update_item_captures_old_and_new_values(
+        self, db, test_user, test_inventory_item
+    ):
+        """Test that update logs capture both old and new values."""
+        original_name = test_inventory_item.name
+        new_name = "Completely New Name"
+
+        update_data = InventoryItemUpdate(name=new_name)
+
+        inventory_service.update_inventory_item(
+            db, test_inventory_item.id, update_data, test_user.id
+        )
+
+        # Get the name update log
+        log = (
+            db.query(AuditLog)
+            .filter(
+                AuditLog.inventory_item_id == test_inventory_item.id,
+                AuditLog.field_name == "name",
+            )
+            .first()
+        )
+
+        assert log is not None
+        assert log.old_value == original_name
+        assert log.new_value == new_name
+
+
+class TestStockAdjustmentAudit:
+    """Test audit logging during stock adjustments."""
+
+    def test_increment_stock_generates_audit_log(
+        self, db, test_user, test_inventory_item
+    ):
+        """Test that incrementing stock creates an audit log."""
+        inventory_service.adjust_stock_quantity(
+            db, test_inventory_item.id, 50, test_user.id
+        )
+
+        logs = (
+            db.query(AuditLog)
+            .filter(AuditLog.inventory_item_id == test_inventory_item.id)
+            .all()
+        )
+        assert len(logs) == 1
+
+    def test_increment_stock_has_correct_action(
+        self, db, test_user, test_inventory_item
+    ):
+        """Test that stock increment has 'stock_increased' action."""
+        inventory_service.adjust_stock_quantity(
+            db, test_inventory_item.id, 25, test_user.id
+        )
+
+        log = (
+            db.query(AuditLog)
+            .filter(AuditLog.inventory_item_id == test_inventory_item.id)
+            .first()
+        )
+
+        assert log.action == "stock_increased"
+
+    def test_increment_stock_logs_old_and_new_quantity(
+        self, db, test_user, test_inventory_item
+    ):
+        """Test that increment logs capture old and new quantities."""
+        original_quantity = test_inventory_item.quantity
+        change_amount = 30
+
+        inventory_service.adjust_stock_quantity(
+            db, test_inventory_item.id, change_amount, test_user.id
+        )
+
+        log = (
+            db.query(AuditLog)
+            .filter(AuditLog.inventory_item_id == test_inventory_item.id)
+            .first()
+        )
+
+        assert log.old_value == str(original_quantity)
+        assert str(original_quantity + change_amount) in log.new_value
+
+    def test_increment_with_reason_stores_reason(
+        self, db, test_user, test_inventory_item
+    ):
+        """Test that increment with reason stores the reason in the log."""
+        reason = "New shipment from supplier"
+
+        inventory_service.adjust_stock_quantity(
+            db, test_inventory_item.id, 100, test_user.id, reason=reason
+        )
+
+        log = (
+            db.query(AuditLog)
+            .filter(AuditLog.inventory_item_id == test_inventory_item.id)
+            .first()
+        )
+
+        assert log.new_value is not None
+        # Reason should be in the new_value (as JSON)
+        log_data = json.loads(log.new_value)
+        assert log_data["reason"] == reason
+
+    def test_decrement_stock_generates_audit_log(
+        self, db, test_user, test_inventory_item
+    ):
+        """Test that decrementing stock creates an audit log."""
+        inventory_service.adjust_stock_quantity(
+            db, test_inventory_item.id, -20, test_user.id
+        )
+
+        logs = (
+            db.query(AuditLog)
+            .filter(AuditLog.inventory_item_id == test_inventory_item.id)
+            .all()
+        )
+        assert len(logs) == 1
+
+    def test_decrement_stock_has_correct_action(
+        self, db, test_user, test_inventory_item
+    ):
+        """Test that stock decrement has 'stock_decreased' action."""
+        inventory_service.adjust_stock_quantity(
+            db, test_inventory_item.id, -15, test_user.id
+        )
+
+        log = (
+            db.query(AuditLog)
+            .filter(AuditLog.inventory_item_id == test_inventory_item.id)
+            .first()
+        )
+
+        assert log.action == "stock_decreased"
+
+    def test_decrement_stock_logs_old_and_new_quantity(
+        self, db, test_user, test_inventory_item
+    ):
+        """Test that decrement logs capture old and new quantities."""
+        original_quantity = test_inventory_item.quantity
+        change_amount = -25
+
+        inventory_service.adjust_stock_quantity(
+            db, test_inventory_item.id, change_amount, test_user.id
+        )
+
+        log = (
+            db.query(AuditLog)
+            .filter(AuditLog.inventory_item_id == test_inventory_item.id)
+            .first()
+        )
+
+        assert log.old_value == str(original_quantity)
+        assert str(original_quantity + change_amount) in log.new_value
+
+    def test_decrement_with_reason_stores_reason(
+        self, db, test_user, test_inventory_item
+    ):
+        """Test that decrement with reason stores the reason in the log."""
+        reason = "Product sold to customer"
+
+        inventory_service.adjust_stock_quantity(
+            db, test_inventory_item.id, -10, test_user.id, reason=reason
+        )
+
+        log = (
+            db.query(AuditLog)
+            .filter(AuditLog.inventory_item_id == test_inventory_item.id)
+            .first()
+        )
+
+        assert log.new_value is not None
+        # Reason should be in the new_value (as JSON)
+        log_data = json.loads(log.new_value)
+        assert log_data["reason"] == reason
+
 
