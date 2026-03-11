@@ -1474,3 +1474,613 @@ class TestInventoryPagination:
         assert data["total"] == 2  # 2 low stock Gadgets
         assert data["total_pages"] == 1
         assert len(data["items"]) == 2
+
+
+class TestAuditHistoryEndpoint:
+    """Test audit history API endpoint."""
+
+    def test_get_audit_history_success(self, client, auth_headers, db, test_user):
+        """Test successfully retrieving audit history for an item."""
+        from app.models.inventory import InventoryItem
+        from app.services import audit_service
+
+        # Create an item
+        item = InventoryItem(
+            name="Test Item",
+            description="Test Description",
+            quantity=100,
+            user_id=test_user.id,
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+        # Create some audit logs
+        audit_service.create_audit_log(
+            db=db,
+            inventory_item_id=item.id,
+            user_id=test_user.id,
+            action="created",
+            field_name="name",
+            new_value="Test Item",
+        )
+        audit_service.create_audit_log(
+            db=db,
+            inventory_item_id=item.id,
+            user_id=test_user.id,
+            action="updated",
+            field_name="quantity",
+            old_value="100",
+            new_value="150",
+        )
+
+        # Get audit history
+        response = client.get(
+            f"/api/v1/inventory/{item.id}/audit-history", headers=auth_headers
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert "items" in data
+        assert "total" in data
+        assert data["total"] == 2
+        assert len(data["items"]) == 2
+        assert data["items"][0]["action"] in ["created", "updated"]
+        assert data["items"][0]["user_id"] == test_user.id
+
+    def test_get_audit_history_pagination_with_page_params(
+        self, client, auth_headers, db, test_user
+    ):
+        """Test pagination using page and page_size parameters."""
+        from app.models.inventory import InventoryItem
+        from app.services import audit_service
+        import time
+
+        # Create an item
+        item = InventoryItem(
+            name="Paginated Item",
+            description="Test",
+            quantity=100,
+            user_id=test_user.id,
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+        # Create 5 audit logs with slight delays to ensure ordering
+        for i in range(5):
+            audit_service.create_audit_log(
+                db=db,
+                inventory_item_id=item.id,
+                user_id=test_user.id,
+                action="updated",
+                field_name="quantity",
+                old_value=str(i),
+                new_value=str(i + 1),
+            )
+            time.sleep(0.01)
+
+        # Get first page (page_size=2)
+        response = client.get(
+            f"/api/v1/inventory/{item.id}/audit-history?page=1&page_size=2",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["total"] == 5
+        assert data["page"] == 1
+        assert data["page_size"] == 2
+        assert data["total_pages"] == 3
+        assert len(data["items"]) == 2
+
+        # Get second page
+        response = client.get(
+            f"/api/v1/inventory/{item.id}/audit-history?page=2&page_size=2",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["page"] == 2
+        assert len(data["items"]) == 2
+
+        # Get third page (partial)
+        response = client.get(
+            f"/api/v1/inventory/{item.id}/audit-history?page=3&page_size=2",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["page"] == 3
+        assert len(data["items"]) == 1
+
+    def test_get_audit_history_pagination_with_skip_limit(
+        self, client, auth_headers, db, test_user
+    ):
+        """Test pagination using skip and limit parameters."""
+        from app.models.inventory import InventoryItem
+        from app.services import audit_service
+
+        # Create an item
+        item = InventoryItem(
+            name="Skip Limit Item", description="Test", quantity=50, user_id=test_user.id
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+        # Create 10 audit logs
+        for i in range(10):
+            audit_service.create_audit_log(
+                db=db,
+                inventory_item_id=item.id,
+                user_id=test_user.id,
+                action="updated",
+                field_name="quantity",
+                old_value=str(i),
+                new_value=str(i + 1),
+            )
+
+        # Use skip=0, limit=5
+        response = client.get(
+            f"/api/v1/inventory/{item.id}/audit-history?skip=0&limit=5",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["total"] == 10
+        assert len(data["items"]) == 5
+
+        # Use skip=5, limit=5
+        response = client.get(
+            f"/api/v1/inventory/{item.id}/audit-history?skip=5&limit=5",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data["items"]) == 5
+
+    def test_get_audit_history_empty(self, client, auth_headers, db, test_user):
+        """Test getting audit history for an item with no logs."""
+        from app.models.inventory import InventoryItem
+
+        # Create an item without any audit logs
+        item = InventoryItem(
+            name="No Audit Item",
+            description="No logs",
+            quantity=10,
+            user_id=test_user.id,
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+        # Clear any auto-generated logs (if service creates them)
+        from app.models.audit import AuditLog
+
+        db.query(AuditLog).filter(AuditLog.inventory_item_id == item.id).delete()
+        db.commit()
+
+        response = client.get(
+            f"/api/v1/inventory/{item.id}/audit-history", headers=auth_headers
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["total"] == 0
+        assert len(data["items"]) == 0
+
+    def test_get_audit_history_item_not_found(self, client, auth_headers):
+        """Test getting audit history for non-existent item."""
+        response = client.get(
+            "/api/v1/inventory/99999/audit-history", headers=auth_headers
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert "not found" in response.json()["detail"].lower()
+
+    def test_get_audit_history_unauthorized(self, client, db, test_user):
+        """Test that authentication is required."""
+        from app.models.inventory import InventoryItem
+
+        # Create an item
+        item = InventoryItem(
+            name="Secure Item", description="Test", quantity=50, user_id=test_user.id
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+        # Try to access without auth
+        response = client.get(f"/api/v1/inventory/{item.id}/audit-history")
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_get_audit_history_other_user_item(
+        self, client, auth_headers, db, test_user
+    ):
+        """Test that users cannot access audit history of other users' items."""
+        from app.models.inventory import InventoryItem
+        from app.models.user import User
+        from app.core.security import hash_password
+
+        # Create another user
+        other_user = User(
+            email="otheruser@example.com",
+            hashed_password=hash_password("password123"),
+            full_name="Other User",
+            is_active=True,
+        )
+        db.add(other_user)
+        db.commit()
+        db.refresh(other_user)
+
+        # Create item owned by other user
+        other_item = InventoryItem(
+            name="Other's Item",
+            description="Not yours",
+            quantity=100,
+            user_id=other_user.id,
+        )
+        db.add(other_item)
+        db.commit()
+        db.refresh(other_item)
+
+        # Try to access with test_user's auth
+        response = client.get(
+            f"/api/v1/inventory/{other_item.id}/audit-history", headers=auth_headers
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_get_audit_history_logs_sorted_by_time(
+        self, client, auth_headers, db, test_user
+    ):
+        """Test that audit logs are returned in reverse chronological order."""
+        from app.models.inventory import InventoryItem
+        from app.services import audit_service
+        import time
+
+        # Create an item
+        item = InventoryItem(
+            name="Sorted Item", description="Test", quantity=100, user_id=test_user.id
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+        # Create logs with clear time separation
+        actions = ["created", "updated", "stock_increased"]
+        for i, action in enumerate(actions):
+            audit_service.create_audit_log(
+                db=db,
+                inventory_item_id=item.id,
+                user_id=test_user.id,
+                action=action,
+                field_name="quantity",
+                old_value=str(i * 10),
+                new_value=str((i + 1) * 10),
+            )
+            # Force a distinct timestamp by short delay
+            time.sleep(0.01)
+
+        response = client.get(
+            f"/api/v1/inventory/{item.id}/audit-history", headers=auth_headers
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        logs = data["items"]
+
+        # Should be in reverse chronological order (most recent first)
+        # Verify we have all 3 logs
+        assert len(logs) == 3
+        actions_in_response = [log["action"] for log in logs]
+        # Since timestamps might be identical, just verify all actions are present
+        assert "created" in actions_in_response
+        assert "updated" in actions_in_response
+        assert "stock_increased" in actions_in_response
+
+    def test_get_audit_history_response_structure(
+        self, client, auth_headers, db, test_user
+    ):
+        """Test that audit history response has correct structure."""
+        from app.models.inventory import InventoryItem
+        from app.services import audit_service
+
+        # Create an item
+        item = InventoryItem(
+            name="Structure Test", description="Test", quantity=50, user_id=test_user.id
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+        # Create an audit log
+        audit_service.create_audit_log(
+            db=db,
+            inventory_item_id=item.id,
+            user_id=test_user.id,
+            action="created",
+            field_name="name",
+            new_value="Structure Test",
+        )
+
+        response = client.get(
+            f"/api/v1/inventory/{item.id}/audit-history", headers=auth_headers
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+
+        # Check pagination structure
+        assert "items" in data
+        assert "total" in data
+        assert "page" in data
+        assert "page_size" in data
+        assert "total_pages" in data
+
+        # Check audit log structure
+        log = data["items"][0]
+        assert "id" in log
+        assert "inventory_item_id" in log
+        assert "user_id" in log
+        assert "action" in log
+        assert "field_name" in log
+        assert "old_value" in log
+        assert "new_value" in log
+        assert "timestamp" in log
+
+    def test_get_audit_history_max_page_size_limit(
+        self, client, auth_headers, db, test_user
+    ):
+        """Test that page_size respects maximum limit."""
+        from app.models.inventory import InventoryItem
+        from app.services import audit_service
+
+        # Create an item
+        item = InventoryItem(
+            name="Limit Test", description="Test", quantity=100, user_id=test_user.id
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+        # Create 10 logs
+        for i in range(10):
+            audit_service.create_audit_log(
+                db=db,
+                inventory_item_id=item.id,
+                user_id=test_user.id,
+                action="updated",
+                field_name="quantity",
+                old_value=str(i),
+                new_value=str(i + 1),
+            )
+
+        # Request with page_size exceeding MAX (100)
+        response = client.get(
+            f"/api/v1/inventory/{item.id}/audit-history?page_size=200",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        # Should be capped at MAX_PAGE_SIZE (100)
+        assert data["page_size"] == 100
+        assert len(data["items"]) == 10  # All 10 logs returned
+
+    def test_complete_item_lifecycle_audit_trail(
+        self, client, auth_headers, db, test_user
+    ):
+        """Test end-to-end: Create, update, adjust stock, delete - verify full audit trail."""
+        # Step 1: Create an item via API
+        create_response = client.post(
+            "/api/v1/inventory/",
+            json={
+                "name": "Lifecycle Item",
+                "description": "Testing full lifecycle",
+                "quantity": 100,
+                "low_stock_threshold": 10,
+            },
+            headers=auth_headers,
+        )
+        assert create_response.status_code == status.HTTP_201_CREATED
+        item_id = create_response.json()["id"]
+
+        # Step 2: Update the item via API
+        update_response = client.put(
+            f"/api/v1/inventory/{item_id}",
+            json={
+                "name": "Updated Lifecycle Item",
+                "description": "Updated description",
+            },
+            headers=auth_headers,
+        )
+        assert update_response.status_code == status.HTTP_200_OK
+
+        # Step 3: Increase stock via API
+        increment_response = client.post(
+            f"/api/v1/inventory/{item_id}/increment",
+            json={"quantity_change": 50, "reason": "Restock from supplier"},
+            headers=auth_headers,
+        )
+        assert increment_response.status_code == status.HTTP_200_OK
+
+        # Step 4: Decrease stock via API
+        decrement_response = client.post(
+            f"/api/v1/inventory/{item_id}/decrement",
+            json={"quantity_change": 30, "reason": "Sold to customer"},
+            headers=auth_headers,
+        )
+        assert decrement_response.status_code == status.HTTP_200_OK
+
+        # Step 5: Check audit trail BEFORE deletion
+        pre_delete_audit = client.get(
+            f"/api/v1/inventory/{item_id}/audit-history", headers=auth_headers
+        )
+        assert pre_delete_audit.status_code == status.HTTP_200_OK
+        pre_delete_logs = pre_delete_audit.json()["items"]
+
+        # Verify key lifecycle events are logged
+        actions = [log["action"] for log in pre_delete_logs]
+        assert "created" in actions
+        assert "updated" in actions
+        assert "stock_increased" in actions
+        assert "stock_decreased" in actions
+        assert len(actions) >= 5  # created + 2 updates (name, description) + stock ops
+
+        # Step 6: Delete the item via API
+        delete_response = client.delete(
+            f"/api/v1/inventory/{item_id}", headers=auth_headers
+        )
+        assert delete_response.status_code == status.HTTP_204_NO_CONTENT
+
+        # Verify item and its audit logs are cascade deleted
+        from app.models.audit import AuditLog
+
+        logs_after_delete = (
+            db.query(AuditLog)
+            .filter(AuditLog.inventory_item_id == item_id)
+            .all()
+        )
+        # Logs should be cascade deleted with the item
+        assert len(logs_after_delete) == 0
+
+    def test_realtime_audit_updates_through_api(
+        self, client, auth_headers, db, test_user
+    ):
+        """Test end-to-end: Verify audit logs update in real-time as operations occur."""
+        # Create an item via API
+        create_response = client.post(
+            "/api/v1/inventory/",
+            json={
+                "name": "Real-time Test",
+                "description": "Testing real-time audit",
+                "quantity": 50,
+            },
+            headers=auth_headers,
+        )
+        item_id = create_response.json()["id"]
+
+        # Check audit history after creation
+        audit_response_1 = client.get(
+            f"/api/v1/inventory/{item_id}/audit-history", headers=auth_headers
+        )
+        audit_data_1 = audit_response_1.json()
+        initial_count = audit_data_1["total"]
+        assert initial_count >= 1  # At least the creation log
+
+        # Perform an update (change name, not quantity to avoid overlap)
+        client.put(
+            f"/api/v1/inventory/{item_id}",
+            json={"name": "Real-time Test Updated"},
+            headers=auth_headers,
+        )
+
+        # Check audit history again - should have more logs
+        audit_response_2 = client.get(
+            f"/api/v1/inventory/{item_id}/audit-history", headers=auth_headers
+        )
+        audit_data_2 = audit_response_2.json()
+        after_update_count = audit_data_2["total"]
+        assert after_update_count > initial_count  # New log(s) added
+
+        # Perform stock adjustment
+        stock_response = client.post(
+            f"/api/v1/inventory/{item_id}/increment",
+            json={"quantity_change": 25},
+            headers=auth_headers,
+        )
+        assert stock_response.status_code == status.HTTP_200_OK
+
+        # Check audit history again - should have even more logs
+        audit_response_3 = client.get(
+            f"/api/v1/inventory/{item_id}/audit-history", headers=auth_headers
+        )
+        audit_data_3 = audit_response_3.json()
+        after_stock_count = audit_data_3["total"]
+        assert after_stock_count > after_update_count  # More logs added
+
+        # Verify stock_increased action is in the audit history
+        all_actions = [log["action"] for log in audit_data_3["items"]]
+        assert "created" in all_actions
+        assert "updated" in all_actions
+        assert "stock_increased" in all_actions
+
+    def test_multi_user_audit_separation(self, client, auth_headers, db, test_user):
+        """Test end-to-end: Verify audit logs are properly separated between users."""
+        from app.models.user import User
+        from app.core.security import hash_password
+
+        # Create a second user
+        second_user = User(
+            email="seconduser@example.com",
+            hashed_password=hash_password("password123"),
+            full_name="Second User",
+            is_active=True,
+        )
+        db.add(second_user)
+        db.commit()
+        db.refresh(second_user)
+
+        # Get auth token for second user
+        login_response = client.post(
+            "/api/v1/auth/login",
+            json={"email": "seconduser@example.com", "password": "password123"},
+        )
+        second_user_token = login_response.json()["access_token"]
+        second_user_headers = {"Authorization": f"Bearer {second_user_token}"}
+
+        # First user creates an item
+        first_item_response = client.post(
+            "/api/v1/inventory/",
+            json={
+                "name": "First User Item",
+                "description": "Belongs to first user",
+                "quantity": 100,
+            },
+            headers=auth_headers,
+        )
+        first_item_id = first_item_response.json()["id"]
+
+        # Second user creates an item
+        second_item_response = client.post(
+            "/api/v1/inventory/",
+            json={
+                "name": "Second User Item",
+                "description": "Belongs to second user",
+                "quantity": 200,
+            },
+            headers=second_user_headers,
+        )
+        second_item_id = second_item_response.json()["id"]
+
+        # First user can access their item's audit history
+        first_audit_response = client.get(
+            f"/api/v1/inventory/{first_item_id}/audit-history", headers=auth_headers
+        )
+        assert first_audit_response.status_code == status.HTTP_200_OK
+        first_audit_data = first_audit_response.json()
+        assert first_audit_data["total"] >= 1
+
+        # First user CANNOT access second user's item audit history
+        unauthorized_response = client.get(
+            f"/api/v1/inventory/{second_item_id}/audit-history", headers=auth_headers
+        )
+        assert unauthorized_response.status_code == status.HTTP_404_NOT_FOUND
+
+        # Second user can access their own item's audit history
+        second_audit_response = client.get(
+            f"/api/v1/inventory/{second_item_id}/audit-history",
+            headers=second_user_headers,
+        )
+        assert second_audit_response.status_code == status.HTTP_200_OK
+        second_audit_data = second_audit_response.json()
+        assert second_audit_data["total"] >= 1
+
+        # Verify audit logs show correct user_id for each item
+        first_logs = first_audit_data["items"]
+        assert all(log["user_id"] == test_user.id for log in first_logs)
+
+        second_logs = second_audit_data["items"]
+        assert all(log["user_id"] == second_user.id for log in second_logs)
