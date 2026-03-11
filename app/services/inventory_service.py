@@ -1,5 +1,6 @@
 """Inventory management service for CRUD operations."""
 
+import json
 from typing import List, Optional
 
 from sqlalchemy import and_, or_
@@ -7,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.models.inventory import InventoryItem
 from app.schemas.inventory import InventoryItemCreate, InventoryItemUpdate
+from app.services import audit_service
 
 
 def create_inventory_item(
@@ -30,6 +32,22 @@ def create_inventory_item(
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
+
+    # Log item creation
+    audit_service.create_audit_log(
+        db=db,
+        inventory_item_id=db_item.id,
+        user_id=user_id,
+        action="created",
+        new_value=json.dumps({
+            "name": db_item.name,
+            "quantity": db_item.quantity,
+            "description": db_item.description,
+            "category_id": db_item.category_id,
+            "low_stock_threshold": db_item.low_stock_threshold,
+        }),
+    )
+
     return db_item
 
 
@@ -138,6 +156,18 @@ def update_inventory_item(
     # Update fields that are provided (exclude_unset for partial updates)
     update_data = item_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
+        old_value = getattr(db_item, field)
+        if old_value != value:
+            # Log each field change
+            audit_service.create_audit_log(
+                db=db,
+                inventory_item_id=db_item.id,
+                user_id=user_id,
+                action="updated",
+                field_name=field,
+                old_value=str(old_value) if old_value is not None else None,
+                new_value=str(value) if value is not None else None,
+            )
         setattr(db_item, field, value)
 
     db.commit()
@@ -159,17 +189,35 @@ def adjust_stock_quantity(
         return None
     
     # Calculate new quantity
-    new_quantity = db_item.quantity + quantity_change
+    old_quantity = db_item.quantity
+    new_quantity = old_quantity + quantity_change
     
     # Validate that new quantity is not negative
     if new_quantity < 0:
         raise ValueError(
             f"Cannot adjust quantity: would result in negative stock "
-            f"(current: {db_item.quantity}, change: {quantity_change})"
+            f"(current: {old_quantity}, change: {quantity_change})"
         )
     
     # Update the quantity
     db_item.quantity = new_quantity
+    
+    # Determine action type
+    action = "stock_increased" if quantity_change > 0 else "stock_decreased"
+    
+    # Log stock adjustment
+    audit_service.create_audit_log(
+        db=db,
+        inventory_item_id=db_item.id,
+        user_id=user_id,
+        action=action,
+        field_name="quantity",
+        old_value=str(old_quantity),
+        new_value=str(new_quantity) if reason is None else json.dumps({
+            "quantity": new_quantity,
+            "reason": reason,
+        }),
+    )
     
     db.commit()
     db.refresh(db_item)
@@ -182,6 +230,20 @@ def delete_inventory_item(db: Session, item_id: int, user_id: int) -> bool:
     db_item = get_inventory_item_by_id(db, item_id, user_id)
     if not db_item:
         return False
+
+    # Log deletion before removing item
+    audit_service.create_audit_log(
+        db=db,
+        inventory_item_id=db_item.id,
+        user_id=user_id,
+        action="deleted",
+        old_value=json.dumps({
+            "name": db_item.name,
+            "quantity": db_item.quantity,
+            "description": db_item.description,
+            "category_id": db_item.category_id,
+        }),
+    )
 
     # Delete item (cascade will handle audit logs)
     db.delete(db_item)
