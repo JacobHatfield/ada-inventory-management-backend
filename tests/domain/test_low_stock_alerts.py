@@ -318,3 +318,53 @@ class TestGetCriticalStockItems:
         items = inventory_service.get_critical_stock_items(db, test_user.id)
         assert len(items) == 1
         assert items[0].user_id == test_user.id
+
+
+class TestCheckAndNotifyLowStock:
+    """Test alert service user-specific notification function."""
+
+    @pytest.mark.asyncio
+    async def test_check_and_notify_low_stock_with_valid_user(self, db, test_user):
+        """Test successful alert check for valid user."""
+        item = InventoryItem(
+            name="Low Stock Item",
+            quantity=7,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+        )
+        db.add(item)
+        db.commit()
+
+        with patch(
+            "app.services.email_service.send_low_stock_alert_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ), patch(
+            "app.services.email_service.send_critical_stock_alert_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ):
+            result = await alert_service.check_and_notify_low_stock(db, test_user.id)
+
+        assert result["success"] is True
+        assert result["low_stock_sent"] is True
+
+    @pytest.mark.asyncio
+    async def test_check_and_notify_low_stock_with_invalid_user(self, db):
+        """Test alert check with non-existent user."""
+        result = await alert_service.check_and_notify_low_stock(db, user_id=99999)
+
+        assert result["success"] is False
+        assert "error" in result
+        assert result["error"] == "User not found"
+
+    @pytest.mark.asyncio
+    async def test_check_and_notify_low_stock_calls_notify_user(self, db, test_user):
+        """Test that check_and_notify delegates to notify_user_low_stock."""
+        with patch(
+            "app.services.alert_service.notify_user_low_stock",
+            new_callable=AsyncMock,
+            return_value={"success": True},
+        ) as mock_notify:
+            await alert_service.check_and_notify_low_stock(db, test_user.id)
+            mock_notify.assert_called_once()
