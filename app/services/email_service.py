@@ -116,9 +116,12 @@ Inventory Management System
 async def send_password_reset_email(
     to_email: str,
     reset_token: str,
-    frontend_url: str = "http://localhost:5173",  # Vue frontend URL
+    frontend_url: str = None,
 ) -> bool:
     """Send password reset email with reset link."""
+    if frontend_url is None:
+        frontend_url = settings.FRONTEND_URL
+        
     if not is_email_configured():
         logger.warning("Email not configured. Skipping password reset email.")
         return False

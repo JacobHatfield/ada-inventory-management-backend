@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     SMTP_FROM_EMAIL: str = ""
     SMTP_FROM_NAME: str = "Inventory Management System"
 
+    # Frontend Configuration (for password reset links)
+    FRONTEND_URL: str = "http://localhost:3000"
+
     # Application Settings
     PROJECT_NAME: str = "Inventory Management API"
     VERSION: str = "1.0.0"
