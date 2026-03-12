@@ -193,3 +193,128 @@ class TestGetLowStockItems:
 
         items = inventory_service.get_low_stock_items(db, test_user.id)
         assert len(items) == 0
+
+
+class TestGetCriticalStockItems:
+    """Test retrieving critically low stock items."""
+
+    def test_get_critical_stock_items_with_default_threshold(self, db, test_user):
+        """Test critical items at default 50% threshold."""
+        item1 = InventoryItem(
+            name="Critical Item",
+            quantity=4,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+        )
+        item2 = InventoryItem(
+            name="Low Item",
+            quantity=7,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+        )
+        db.add_all([item1, item2])
+        db.commit()
+
+        items = inventory_service.get_critical_stock_items(db, test_user.id)
+        assert len(items) == 1
+        assert items[0].name == "Critical Item"
+
+    def test_get_critical_stock_items_with_custom_threshold(self, db, test_user):
+        """Test critical items with custom threshold percentage."""
+        item1 = InventoryItem(
+            name="Item A", quantity=2, low_stock_threshold=10, user_id=test_user.id
+        )
+        item2 = InventoryItem(
+            name="Item B", quantity=6, low_stock_threshold=10, user_id=test_user.id
+        )
+        db.add_all([item1, item2])
+        db.commit()
+
+        items = inventory_service.get_critical_stock_items(
+            db, test_user.id, threshold_percentage=0.3
+        )
+        assert len(items) == 1
+        assert items[0].name == "Item A"
+
+    def test_get_critical_stock_items_at_exact_threshold(self, db, test_user):
+        """Test item at exactly the critical threshold percentage."""
+        item = InventoryItem(
+            name="Critical Item",
+            quantity=5,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+        )
+        db.add(item)
+        db.commit()
+
+        items = inventory_service.get_critical_stock_items(db, test_user.id)
+        assert len(items) == 1
+
+    def test_get_critical_stock_items_excludes_non_critical(self, db, test_user):
+        """Test that non-critical low stock items are excluded."""
+        item1 = InventoryItem(
+            name="Critical Item",
+            quantity=3,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+        )
+        item2 = InventoryItem(
+            name="Low Item",
+            quantity=8,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+        )
+        item3 = InventoryItem(
+            name="Healthy Item",
+            quantity=20,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+        )
+        db.add_all([item1, item2, item3])
+        db.commit()
+
+        items = inventory_service.get_critical_stock_items(db, test_user.id)
+        assert len(items) == 1
+        assert items[0].name == "Critical Item"
+
+    def test_get_critical_stock_items_sorts_by_quantity(self, db, test_user):
+        """Test that results are sorted by quantity ascending."""
+        item1 = InventoryItem(
+            name="Item A", quantity=4, low_stock_threshold=10, user_id=test_user.id
+        )
+        item2 = InventoryItem(
+            name="Item B", quantity=1, low_stock_threshold=10, user_id=test_user.id
+        )
+        item3 = InventoryItem(
+            name="Item C", quantity=3, low_stock_threshold=10, user_id=test_user.id
+        )
+        db.add_all([item1, item2, item3])
+        db.commit()
+
+        items = inventory_service.get_critical_stock_items(db, test_user.id)
+        assert items[0].quantity == 1
+        assert items[1].quantity == 3
+        assert items[2].quantity == 4
+
+    def test_get_critical_stock_items_only_returns_user_items(
+        self, db, test_user, other_user
+    ):
+        """Test user isolation for critical stock items."""
+        item1 = InventoryItem(
+            name="User 1 Critical",
+            quantity=3,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+        )
+        item2 = InventoryItem(
+            name="User 2 Critical",
+            quantity=3,
+            low_stock_threshold=10,
+            user_id=other_user.id,
+        )
+        db.add_all([item1, item2])
+        db.commit()
+
+        items = inventory_service.get_critical_stock_items(db, test_user.id)
+        assert len(items) == 1
+        assert items[0].user_id == test_user.id
