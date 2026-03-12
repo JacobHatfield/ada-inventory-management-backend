@@ -83,3 +83,24 @@ class InventoryItemResponse(InventoryItemBase):
             return "low"
         else:
             return "healthy"
+
+
+class StockSummaryResponse(BaseModel):
+    """Schema for stock status summary statistics."""
+
+    total_items: int
+    out_of_stock: int
+    critical_stock: int
+    low_stock: int
+    healthy_stock: int
+
+
+class AlertCheckResponse(BaseModel):
+    """Schema for alert check response."""
+
+    success: bool
+    low_stock_sent: bool
+    critical_stock_sent: bool
+    low_stock_count: int
+    critical_stock_count: int
+    message: Optional[str] = None
