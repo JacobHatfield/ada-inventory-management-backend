@@ -100,7 +100,13 @@ def verify_reset_token(db: Session, token: str) -> Optional[PasswordResetToken]:
         return None
 
     # Check if token is expired
-    if reset_token.expires_at < datetime.now(timezone.utc):
+    # Handle both naive and aware datetimes (SQLite stores as naive)
+    now = datetime.now(timezone.utc)
+    expires_at = reset_token.expires_at
+    if expires_at.tzinfo is None:
+        now = now.replace(tzinfo=None)
+    
+    if expires_at < now:
         return None
 
     return reset_token
