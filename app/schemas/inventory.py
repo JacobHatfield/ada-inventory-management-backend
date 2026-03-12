@@ -3,7 +3,8 @@
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
+from pydantic import (BaseModel, ConfigDict, Field, computed_field,
+                      field_validator)
 
 from app.schemas.category import CategoryResponse
 
@@ -37,8 +38,12 @@ class InventoryItemUpdate(BaseModel):
 class StockUpdate(BaseModel):
     """Schema for stock increment/decrement operations."""
 
-    quantity_change: int = Field(..., gt=0, description="Amount to add/remove (must be positive)")
-    reason: Optional[str] = Field(None, max_length=200, description="Optional reason for stock change")
+    quantity_change: int = Field(
+        ..., gt=0, description="Amount to add/remove (must be positive)"
+    )
+    reason: Optional[str] = Field(
+        None, max_length=200, description="Optional reason for stock change"
+    )
 
     @field_validator("quantity_change")
     @classmethod

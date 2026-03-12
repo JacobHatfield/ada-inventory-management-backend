@@ -3,27 +3,20 @@
 import logging
 from typing import Annotated, Literal, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException, Query,
+                     status)
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal, get_db
 from app.dependencies import get_current_active_user
 from app.models.user import User
 from app.schemas.audit import AuditLogResponse
-from app.schemas.inventory import (
-    AlertCheckResponse,
-    InventoryItemCreate,
-    InventoryItemResponse,
-    InventoryItemUpdate,
-    StockSummaryResponse,
-    StockUpdate,
-)
+from app.schemas.inventory import (AlertCheckResponse, InventoryItemCreate,
+                                   InventoryItemResponse, InventoryItemUpdate,
+                                   StockSummaryResponse, StockUpdate)
 from app.services import alert_service, audit_service, inventory_service
-from app.utils.pagination import (
-    PaginatedResponse,
-    calculate_total_pages,
-    get_pagination_params,
-)
+from app.utils.pagination import (PaginatedResponse, calculate_total_pages,
+                                  get_pagination_params)
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 logger = logging.getLogger(__name__)
@@ -248,11 +241,11 @@ async def update_inventory_item(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Inventory item not found",
             )
-        
+
         # Check if quantity was decreased, trigger alert check in background
         if item_data.quantity is not None and inventory_service.check_low_stock(item):
             background_tasks.add_task(check_low_stock_background, current_user.id)
-        
+
         return item
     except ValueError as e:
         raise HTTPException(
@@ -339,11 +332,11 @@ async def decrement_stock(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Inventory item not found",
             )
-        
+
         # Always check for low stock alerts after decrementing
         if inventory_service.check_low_stock(item):
             background_tasks.add_task(check_low_stock_background, current_user.id)
-        
+
         return item
     except ValueError as e:
         raise HTTPException(
@@ -399,5 +392,3 @@ def get_item_audit_history(
         page_size=final_page_size,
         total_pages=total_pages,
     )
-
-

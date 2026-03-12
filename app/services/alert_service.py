@@ -1,7 +1,6 @@
 """Alert service for low stock notifications."""
 
 import logging
-from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -103,7 +102,7 @@ async def notify_user_low_stock(db: Session, user: User) -> dict:
 
 async def check_and_notify_all_users(db: Session) -> dict:
     """Check and notify all active users about their low stock items."""
-    users = db.query(User).filter(User.is_active == True).all()
+    users = db.query(User).filter(User.is_active.is_(True)).all()
 
     results = {
         "total_users": len(users),

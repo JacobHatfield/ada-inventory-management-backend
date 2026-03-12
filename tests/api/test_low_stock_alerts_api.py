@@ -10,7 +10,9 @@ from app.models.inventory import InventoryItem
 class TestLowStockItemsAPI:
     """Tests for the low stock items endpoint."""
 
-    def test_get_low_stock_items_returns_sorted(self, client, auth_headers, db, test_user, other_user):
+    def test_get_low_stock_items_returns_sorted(
+        self, client, auth_headers, db, test_user, other_user
+    ):
         """Return only low stock items for the current user, sorted by quantity."""
         items = [
             InventoryItem(
@@ -210,7 +212,9 @@ class TestAlertCheckAPI:
             new_callable=AsyncMock,
             return_value=result,
         ):
-            response = client.post("/api/v1/inventory/alerts/check", headers=auth_headers)
+            response = client.post(
+                "/api/v1/inventory/alerts/check", headers=auth_headers
+            )
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -225,7 +229,9 @@ class TestAlertCheckAPI:
             new_callable=AsyncMock,
             return_value=result,
         ):
-            response = client.post("/api/v1/inventory/alerts/check", headers=auth_headers)
+            response = client.post(
+                "/api/v1/inventory/alerts/check", headers=auth_headers
+            )
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
         assert response.json()["detail"] == "boom"
