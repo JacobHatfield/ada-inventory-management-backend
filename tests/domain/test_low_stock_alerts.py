@@ -368,3 +368,200 @@ class TestCheckAndNotifyLowStock:
         ) as mock_notify:
             await alert_service.check_and_notify_low_stock(db, test_user.id)
             mock_notify.assert_called_once()
+
+
+class TestNotifyUserLowStock:
+    """Test notification logic for individual users."""
+
+    @pytest.mark.asyncio
+    async def test_notify_user_low_stock_with_no_items(self, db, test_user):
+        """Test notification when user has no low stock items."""
+        result = await alert_service.notify_user_low_stock(db, test_user)
+
+        assert result["success"] is True
+        assert result["low_stock_sent"] is False
+        assert result["critical_stock_sent"] is False
+        assert result["message"] == "No low stock items found"
+
+    @pytest.mark.asyncio
+    async def test_notify_user_low_stock_sends_low_stock_email(
+        self, db, test_user, test_category
+    ):
+        """Test that low stock email is sent for low stock items."""
+        item = InventoryItem(
+            name="Low Item",
+            quantity=8,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+            category_id=test_category.id,
+        )
+        db.add(item)
+        db.commit()
+
+        with patch(
+            "app.services.email_service.send_low_stock_alert_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_email, patch(
+            "app.services.email_service.send_critical_stock_alert_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ):
+            result = await alert_service.notify_user_low_stock(db, test_user)
+
+        assert result["success"] is True
+        assert result["low_stock_sent"] is True
+        assert result["low_stock_count"] == 1
+        mock_email.assert_called_once()
+        assert mock_email.call_args[1]["to_email"] == test_user.email
+        assert len(mock_email.call_args[1]["items"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_notify_user_low_stock_sends_critical_stock_email(
+        self, db, test_user, test_category
+    ):
+        """Test that critical stock email is sent for critical items."""
+        item = InventoryItem(
+            name="Critical Item",
+            quantity=3,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+            category_id=test_category.id,
+        )
+        db.add(item)
+        db.commit()
+
+        with patch(
+            "app.services.email_service.send_critical_stock_alert_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_email:
+            result = await alert_service.notify_user_low_stock(db, test_user)
+
+        assert result["success"] is True
+        assert result["critical_stock_sent"] is True
+        assert result["critical_stock_count"] == 1
+        mock_email.assert_called_once()
+        assert mock_email.call_args[1]["to_email"] == test_user.email
+
+    @pytest.mark.asyncio
+    async def test_notify_user_separates_critical_from_low_stock(
+        self, db, test_user, test_category
+    ):
+        """Test that critical items are separated from regular low stock."""
+        critical_item = InventoryItem(
+            name="Critical Item",
+            quantity=3,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+            category_id=test_category.id,
+        )
+        low_item = InventoryItem(
+            name="Low Item",
+            quantity=8,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+            category_id=test_category.id,
+        )
+        db.add_all([critical_item, low_item])
+        db.commit()
+
+        with patch(
+            "app.services.email_service.send_low_stock_alert_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_low, patch(
+            "app.services.email_service.send_critical_stock_alert_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_critical:
+            result = await alert_service.notify_user_low_stock(db, test_user)
+
+        assert result["success"] is True
+        assert result["low_stock_sent"] is True
+        assert result["critical_stock_sent"] is True
+        assert result["low_stock_count"] == 1
+        assert result["critical_stock_count"] == 1
+        assert mock_low.call_args[1]["items"][0]["name"] == "Low Item"
+        assert mock_critical.call_args[1]["items"][0]["name"] == "Critical Item"
+
+    @pytest.mark.asyncio
+    async def test_notify_user_includes_category_in_email_data(
+        self, db, test_user, test_category
+    ):
+        """Test that category name is included in email data."""
+        item = InventoryItem(
+            name="Test Item",
+            quantity=7,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+            category_id=test_category.id,
+        )
+        db.add(item)
+        db.commit()
+
+        with patch(
+            "app.services.email_service.send_low_stock_alert_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_email, patch(
+            "app.services.email_service.send_critical_stock_alert_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ):
+            await alert_service.notify_user_low_stock(db, test_user)
+
+        assert mock_email.call_args[1]["items"][0]["category"] == test_category.name
+
+    @pytest.mark.asyncio
+    async def test_notify_user_handles_uncategorized_items(self, db, test_user):
+        """Test that items without category show as Uncategorized."""
+        item = InventoryItem(
+            name="Test Item",
+            quantity=7,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+            category_id=None,
+        )
+        db.add(item)
+        db.commit()
+
+        with patch(
+            "app.services.email_service.send_low_stock_alert_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_email, patch(
+            "app.services.email_service.send_critical_stock_alert_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ):
+            await alert_service.notify_user_low_stock(db, test_user)
+
+        assert mock_email.call_args[1]["items"][0]["category"] == "Uncategorized"
+
+    @pytest.mark.asyncio
+    async def test_notify_user_handles_email_send_failure(self, db, test_user):
+        """Test graceful handling when email send fails."""
+        item = InventoryItem(
+            name="Test Item",
+            quantity=7,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+        )
+        db.add(item)
+        db.commit()
+
+        with patch(
+            "app.services.email_service.send_low_stock_alert_email",
+            new_callable=AsyncMock,
+            side_effect=Exception("Email send failed"),
+        ), patch(
+            "app.services.email_service.send_critical_stock_alert_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ):
+            result = await alert_service.notify_user_low_stock(db, test_user)
+
+        assert result["success"] is True
+        assert result["low_stock_sent"] is False
+        assert "low_error" in result
