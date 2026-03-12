@@ -1,9 +1,9 @@
 """Inventory item schemas for request/response validation."""
 
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
 from app.schemas.category import CategoryResponse
 
@@ -53,9 +53,33 @@ class InventoryItemResponse(InventoryItemBase):
 
     id: int
     user_id: int
-    is_low_stock: bool
     category: Optional[CategoryResponse] = None
     created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+    @computed_field
+    @property
+    def is_low_stock(self) -> bool:
+        """Check if item is at or below low stock threshold."""
+        if self.low_stock_threshold is None:
+            return False
+        return self.quantity <= self.low_stock_threshold
+
+    @computed_field
+    @property
+    def stock_status(self) -> Literal["out_of_stock", "critical", "low", "healthy"]:
+        """Determine stock status based on quantity and threshold."""
+        if self.quantity == 0:
+            return "out_of_stock"
+
+        if self.low_stock_threshold is None:
+            return "healthy"
+
+        if self.quantity <= self.low_stock_threshold * 0.5:
+            return "critical"
+        elif self.quantity <= self.low_stock_threshold:
+            return "low"
+        else:
+            return "healthy"
