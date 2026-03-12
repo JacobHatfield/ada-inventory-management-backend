@@ -259,3 +259,52 @@ def delete_inventory_item(db: Session, item_id: int, user_id: int) -> bool:
     db.delete(db_item)
     db.commit()
     return True
+
+
+# Low Stock Detection Functions
+def check_low_stock(item: InventoryItem) -> bool:
+    """Check if an inventory item is below its low stock threshold."""
+    if item.low_stock_threshold is None:
+        return False
+    return item.quantity <= item.low_stock_threshold
+
+
+def get_low_stock_items(db: Session, user_id: int) -> List[InventoryItem]:
+    """Get all inventory items that are at or below their low stock threshold."""
+    return (
+        db.query(InventoryItem)
+        .filter(
+            InventoryItem.user_id == user_id,
+            InventoryItem.low_stock_threshold.isnot(None),
+            InventoryItem.quantity <= InventoryItem.low_stock_threshold,
+        )
+        .order_by(InventoryItem.quantity.asc())
+        .all()
+    )
+
+
+def get_critical_stock_items(
+    db: Session, user_id: int, threshold_percentage: float = 0.5
+) -> List[InventoryItem]:
+    """Get inventory items that are critically low (below threshold percentage)."""
+    items = (
+        db.query(InventoryItem)
+        .filter(
+            InventoryItem.user_id == user_id,
+            InventoryItem.low_stock_threshold.isnot(None),
+            InventoryItem.quantity <= InventoryItem.low_stock_threshold,
+        )
+        .all()
+    )
+
+    # Filter items that are below the critical percentage
+    critical_items = [
+        item
+        for item in items
+        if item.quantity <= (item.low_stock_threshold * threshold_percentage)
+    ]
+
+    # Sort by quantity (lowest first)
+    critical_items.sort(key=lambda x: x.quantity)
+
+    return critical_items
