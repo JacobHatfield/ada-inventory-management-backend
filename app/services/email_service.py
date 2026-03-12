@@ -111,3 +111,122 @@ Inventory Management System
 """
 
     return await send_email(to_email, subject, body, html_body)
+
+
+async def send_password_reset_email(
+    to_email: str,
+    reset_token: str,
+    frontend_url: str = "http://localhost:5173",  # Vue frontend URL
+) -> bool:
+    """Send password reset email with reset link."""
+    if not is_email_configured():
+        logger.warning("Email not configured. Skipping password reset email.")
+        return False
+
+    reset_link = f"{frontend_url}/reset-password?token={reset_token}"
+
+    subject = "Password Reset Request"
+
+    # Plain text version
+    body = f"""
+Hello,
+
+You requested to reset your password for the Inventory Management System.
+
+Click the link below to reset your password:
+{reset_link}
+
+This link will expire in 1 hour.
+
+If you didn't request this, please ignore this email.
+
+Best regards,
+Inventory Management Team
+"""
+
+    # HTML version
+    html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .button {{ 
+            display: inline-block; 
+            padding: 12px 24px; 
+            background-color: #4F46E5; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 5px; 
+            margin: 20px 0;
+        }}
+        .footer {{ margin-top: 30px; font-size: 12px; color: #666; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Password Reset Request</h2>
+        <p>You requested to reset your password for the Inventory Management System.</p>
+        <p>Click the button below to reset your password:</p>
+        <a href="{reset_link}" class="button">Reset Password</a>
+        <p>Or copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; color: #666;">{reset_link}</p>
+        <p><strong>This link will expire in 1 hour.</strong></p>
+        <div class="footer">
+            <p>If you didn't request this, please ignore this email.</p>
+            <p>Best regards,<br>Inventory Management Team</p>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+    return await send_email(to_email, subject, body, html_body)
+
+
+async def send_password_reset_confirmation_email(to_email: str) -> bool:
+    """Send confirmation email after successful password reset."""
+    if not is_email_configured():
+        logger.warning("Email not configured. Skipping confirmation email.")
+        return False
+
+    subject = "Password Successfully Reset"
+
+    body = """
+Hello,
+
+Your password has been successfully reset.
+
+If you didn't make this change, please contact support immediately.
+
+Best regards,
+Inventory Management Team
+"""
+
+    html_body = """
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .success { color: #10B981; font-weight: bold; }
+        .footer { margin-top: 30px; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Password Successfully Reset</h2>
+        <p class="success">✓ Your password has been successfully reset.</p>
+        <p>You can now log in with your new password.</p>
+        <div class="footer">
+            <p>If you didn't make this change, please contact support immediately.</p>
+            <p>Best regards,<br>Inventory Management Team</p>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+    return await send_email(to_email, subject, body, html_body)
