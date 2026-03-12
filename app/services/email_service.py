@@ -121,7 +121,7 @@ async def send_password_reset_email(
     """Send password reset email with reset link."""
     if frontend_url is None:
         frontend_url = settings.FRONTEND_URL
-        
+
     if not is_email_configured():
         logger.warning("Email not configured. Skipping password reset email.")
         return False

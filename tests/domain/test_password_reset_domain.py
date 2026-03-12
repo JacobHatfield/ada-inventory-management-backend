@@ -2,7 +2,6 @@
 
 from datetime import datetime, timedelta, timezone
 
-import pytest
 
 from app.core.security import verify_password
 from app.models.password_reset import PasswordResetToken

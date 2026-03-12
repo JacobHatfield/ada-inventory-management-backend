@@ -105,16 +105,14 @@ def verify_reset_token(db: Session, token: str) -> Optional[PasswordResetToken]:
     expires_at = reset_token.expires_at
     if expires_at.tzinfo is None:
         now = now.replace(tzinfo=None)
-    
+
     if expires_at < now:
         return None
 
     return reset_token
 
 
-def reset_user_password(
-    db: Session, token: str, new_password: str
-) -> Optional[User]:
+def reset_user_password(db: Session, token: str, new_password: str) -> Optional[User]:
     """Reset user password using a valid reset token."""
     # Verify token
     reset_token = verify_reset_token(db, token)
