@@ -118,6 +118,102 @@ def get_inventory_items(
     )
 
 
+@router.get("/low-stock", response_model=list[InventoryItemResponse])
+def get_low_stock_items(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """Get all inventory items that are at or below their low stock threshold."""
+    items = inventory_service.get_low_stock_items(db, current_user.id)
+    return items
+
+
+@router.get("/critical-stock", response_model=list[InventoryItemResponse])
+def get_critical_stock_items(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    threshold_percentage: float = Query(
+        0.5, ge=0, le=1, description="Critical threshold percentage (default 0.5 = 50%)"
+    ),
+):
+    """Get inventory items that are critically low (below threshold percentage)."""
+    items = inventory_service.get_critical_stock_items(
+        db, current_user.id, threshold_percentage
+    )
+    return items
+
+
+@router.get("/stock-summary", response_model=StockSummaryResponse)
+def get_stock_summary(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """Get summary of stock status for all inventory items."""
+    items = inventory_service.get_user_inventory_items(
+        db, current_user.id, category_id=None, search=None, stock_status=None
+    )
+
+    summary = {
+        "total_items": len(items),
+        "out_of_stock": 0,
+        "critical_stock": 0,
+        "low_stock": 0,
+        "healthy_stock": 0,
+    }
+
+    for item in items:
+        status = (
+            "out_of_stock"
+            if item.quantity == 0
+            else (
+                "critical"
+                if item.low_stock_threshold
+                and item.quantity <= item.low_stock_threshold * 0.5
+                else (
+                    "low"
+                    if item.low_stock_threshold
+                    and item.quantity <= item.low_stock_threshold
+                    else "healthy"
+                )
+            )
+        )
+
+        if status == "out_of_stock":
+            summary["out_of_stock"] += 1
+        elif status == "critical":
+            summary["critical_stock"] += 1
+        elif status == "low":
+            summary["low_stock"] += 1
+        else:
+            summary["healthy_stock"] += 1
+
+    return StockSummaryResponse(**summary)
+
+
+@router.post("/alerts/check", response_model=AlertCheckResponse)
+async def check_low_stock_alerts(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """Manually trigger low stock alert check and send notifications if needed."""
+    result = await alert_service.check_and_notify_low_stock(db, current_user.id)
+
+    if not result["success"]:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=result.get("error", "Failed to check low stock alerts"),
+        )
+
+    return AlertCheckResponse(
+        success=result["success"],
+        low_stock_sent=result.get("low_stock_sent", False),
+        critical_stock_sent=result.get("critical_stock_sent", False),
+        low_stock_count=result.get("low_stock_count", 0),
+        critical_stock_count=result.get("critical_stock_count", 0),
+        message=result.get("message"),
+    )
+
+
 @router.get("/{item_id}", response_model=InventoryItemResponse)
 def get_inventory_item(
     item_id: int,
@@ -305,97 +401,3 @@ def get_item_audit_history(
     )
 
 
-@router.get("/low-stock", response_model=list[InventoryItemResponse])
-def get_low_stock_items(
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)],
-):
-    """Get all inventory items that are at or below their low stock threshold."""
-    items = inventory_service.get_low_stock_items(db, current_user.id)
-    return items
-
-
-@router.get("/critical-stock", response_model=list[InventoryItemResponse])
-def get_critical_stock_items(
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)],
-    threshold_percentage: float = Query(
-        0.5, ge=0, le=1, description="Critical threshold percentage (default 0.5 = 50%)"
-    ),
-):
-    """Get inventory items that are critically low (below threshold percentage)."""
-    items = inventory_service.get_critical_stock_items(
-        db, current_user.id, threshold_percentage
-    )
-    return items
-
-
-@router.get("/stock-summary", response_model=StockSummaryResponse)
-def get_stock_summary(
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)],
-):
-    """Get summary of stock status for all inventory items."""
-    items = inventory_service.get_user_inventory_items(
-        db, current_user.id, category_id=None, search=None, stock_status=None
-    )
-
-    summary = {
-        "total_items": len(items),
-        "out_of_stock": 0,
-        "critical_stock": 0,
-        "low_stock": 0,
-        "healthy_stock": 0,
-    }
-
-    for item in items:
-        status = (
-            "out_of_stock"
-            if item.quantity == 0
-            else (
-                "critical"
-                if item.low_stock_threshold
-                and item.quantity <= item.low_stock_threshold * 0.5
-                else (
-                    "low"
-                    if item.low_stock_threshold
-                    and item.quantity <= item.low_stock_threshold
-                    else "healthy"
-                )
-            )
-        )
-
-        if status == "out_of_stock":
-            summary["out_of_stock"] += 1
-        elif status == "critical":
-            summary["critical_stock"] += 1
-        elif status == "low":
-            summary["low_stock"] += 1
-        else:
-            summary["healthy_stock"] += 1
-
-    return StockSummaryResponse(**summary)
-
-
-@router.post("/alerts/check", response_model=AlertCheckResponse)
-async def check_low_stock_alerts(
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)],
-):
-    """Manually trigger low stock alert check and send notifications if needed."""
-    result = await alert_service.check_and_notify_low_stock(db, current_user.id)
-
-    if not result["success"]:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=result.get("error", "Failed to check low stock alerts"),
-        )
-
-    return AlertCheckResponse(
-        success=result["success"],
-        low_stock_sent=result.get("low_stock_sent", False),
-        critical_stock_sent=result.get("critical_stock_sent", False),
-        low_stock_count=result.get("low_stock_count", 0),
-        critical_stock_count=result.get("critical_stock_count", 0),
-        message=result.get("message"),
-    )
