@@ -233,3 +233,191 @@ Inventory Management Team
 """
 
     return await send_email(to_email, subject, body, html_body)
+
+
+async def send_low_stock_alert_email(
+    to_email: str, items: list[dict], frontend_url: str = None
+) -> bool:
+    """Send low stock alert email with list of items needing restocking."""
+    if frontend_url is None:
+        frontend_url = settings.FRONTEND_URL
+
+    if not is_email_configured():
+        logger.warning("Email not configured. Skipping low stock alert email.")
+        return False
+
+    subject = f"Low Stock Alert - {len(items)} Item(s) Need Restocking"
+
+    items_text = "\n".join(
+        [
+            f"- {item['name']}: {item['quantity']} left (threshold: {item['low_stock_threshold']})"
+            for item in items
+        ]
+    )
+
+    body = f"""
+Hello,
+
+You have {len(items)} inventory item(s) that are below their stock threshold:
+
+{items_text}
+
+Please consider restocking these items soon.
+
+Best regards,
+Inventory Management Team
+"""
+
+    items_html = "\n".join(
+        [
+            f"""
+            <tr>
+                <td style="padding: 12px; border-bottom: 1px solid #f0f0f0;">{item['name']}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #f0f0f0; text-align: center;">{item['quantity']}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #f0f0f0; text-align: center;">{item['low_stock_threshold']}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #f0f0f0;">{item.get('category', 'Uncategorized')}</td>
+            </tr>
+            """
+            for item in items
+        ]
+    )
+
+    html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 700px; margin: 0 auto; padding: 20px; }}
+        .alert {{ background-color: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; margin: 20px 0; }}
+        table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+        th {{ background-color: #F59E0B; color: white; padding: 12px; text-align: left; }}
+        .btn {{ display: inline-block; padding: 12px 24px; background-color: #F59E0B; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+        .footer {{ margin-top: 30px; font-size: 12px; color: #666; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Low Stock Alert</h2>
+        <div class="alert">
+            <strong>Attention:</strong> You have {len(items)} inventory item(s) that need restocking.
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item Name</th>
+                    <th style="text-align: center;">Current Stock</th>
+                    <th style="text-align: center;">Threshold</th>
+                    <th>Category</th>
+                </tr>
+            </thead>
+            <tbody>
+{items_html}
+            </tbody>
+        </table>
+        <a href="{frontend_url}/inventory?filter=low_stock" class="btn">View Inventory</a>
+        <div class="footer">
+            <p>This is an automated alert. Please restock these items to maintain optimal inventory levels.</p>
+            <p>Best regards,<br>Inventory Management Team</p>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+    return await send_email(to_email, subject, body, html_body)
+
+
+async def send_critical_stock_alert_email(
+    to_email: str, items: list[dict], frontend_url: str = None
+) -> bool:
+    """Send critical stock alert email for items at critically low levels."""
+    if frontend_url is None:
+        frontend_url = settings.FRONTEND_URL
+
+    if not is_email_configured():
+        logger.warning("Email not configured. Skipping critical stock alert email.")
+        return False
+
+    subject = f"CRITICAL Stock Alert - {len(items)} Item(s) Urgently Need Restocking"
+
+    items_text = "\n".join(
+        [
+            f"- {item['name']}: Only {item['quantity']} left! (threshold: {item['low_stock_threshold']})"
+            for item in items
+        ]
+    )
+
+    body = f"""
+URGENT ACTION REQUIRED
+
+You have {len(items)} inventory item(s) in CRITICAL stock condition:
+
+{items_text}
+
+These items are at or below 50% of their stock threshold. Please restock immediately.
+
+Best regards,
+Inventory Management Team
+"""
+
+    items_html = "\n".join(
+        [
+            f"""
+            <tr style="background-color: #FEE2E2;">
+                <td style="padding: 12px; border-bottom: 1px solid #f0f0f0; font-weight: bold;">{item['name']}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #f0f0f0; text-align: center; color: #DC2626; font-weight: bold;">{item['quantity']}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #f0f0f0; text-align: center;">{item['low_stock_threshold']}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #f0f0f0;">{item.get('category', 'Uncategorized')}</td>
+            </tr>
+            """
+            for item in items
+        ]
+    )
+
+    html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 700px; margin: 0 auto; padding: 20px; }}
+        .critical-alert {{ background-color: #FEE2E2; border-left: 4px solid #DC2626; padding: 15px; margin: 20px 0; }}
+        table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+        th {{ background-color: #DC2626; color: white; padding: 12px; text-align: left; }}
+        .btn {{ display: inline-block; padding: 12px 24px; background-color: #DC2626; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+        .footer {{ margin-top: 30px; font-size: 12px; color: #666; }}
+        .urgent {{ color: #DC2626; font-weight: bold; font-size: 18px; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>CRITICAL Stock Alert</h2>
+        <div class="critical-alert">
+            <p class="urgent">URGENT ACTION REQUIRED</p>
+            <strong>Critical:</strong> You have {len(items)} inventory item(s) at critically low levels.
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item Name</th>
+                    <th style="text-align: center;">Current Stock</th>
+                    <th style="text-align: center;">Threshold</th>
+                    <th>Category</th>
+                </tr>
+            </thead>
+            <tbody>
+{items_html}
+            </tbody>
+        </table>
+        <a href="{frontend_url}/inventory?filter=critical_stock" class="btn">Restock Now</a>
+        <div class="footer">
+            <p style="color: #DC2626; font-weight: bold;">These items require immediate attention to prevent stockouts.</p>
+            <p>Best regards,<br>Inventory Management Team</p>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+    return await send_email(to_email, subject, body, html_body)
