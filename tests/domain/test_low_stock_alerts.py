@@ -565,3 +565,157 @@ class TestNotifyUserLowStock:
         assert result["success"] is True
         assert result["low_stock_sent"] is False
         assert "low_error" in result
+
+
+class TestCheckAndNotifyAllUsers:
+    """Test batch notification for all active users."""
+
+    @pytest.mark.asyncio
+    async def test_check_and_notify_all_users_with_no_users(self, db):
+        """Test batch notification with no users in database."""
+        result = await alert_service.check_and_notify_all_users(db)
+
+        assert result["total_users"] == 0
+        assert result["users_notified"] == 0
+
+    @pytest.mark.asyncio
+    async def test_check_and_notify_all_users_notifies_active_users(
+        self, db, test_user
+    ):
+        """Test that active users are notified."""
+        item = InventoryItem(
+            name="Low Item",
+            quantity=7,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+        )
+        db.add(item)
+        db.commit()
+
+        with patch(
+            "app.services.email_service.send_low_stock_alert_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ), patch(
+            "app.services.email_service.send_critical_stock_alert_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ):
+            result = await alert_service.check_and_notify_all_users(db)
+
+        assert result["total_users"] == 1
+        assert result["users_notified"] == 1
+        assert result["total_low_stock"] == 1
+
+    @pytest.mark.asyncio
+    async def test_check_and_notify_all_users_skips_inactive_users(
+        self, db, test_user, inactive_user
+    ):
+        """Test that inactive users are skipped."""
+        item1 = InventoryItem(
+            name="Active User Item",
+            quantity=7,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+        )
+        item2 = InventoryItem(
+            name="Inactive User Item",
+            quantity=7,
+            low_stock_threshold=10,
+            user_id=inactive_user.id,
+        )
+        db.add_all([item1, item2])
+        db.commit()
+
+        with patch(
+            "app.services.email_service.send_low_stock_alert_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ), patch(
+            "app.services.email_service.send_critical_stock_alert_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ):
+            result = await alert_service.check_and_notify_all_users(db)
+
+        assert result["total_users"] == 1
+        assert result["users_notified"] == 1
+
+    @pytest.mark.asyncio
+    async def test_check_and_notify_all_users_aggregates_counts(
+        self, db, test_user, other_user
+    ):
+        """Test that counts are aggregated across all users."""
+        item1 = InventoryItem(
+            name="User 1 Low", quantity=8, low_stock_threshold=10, user_id=test_user.id
+        )
+        item2 = InventoryItem(
+            name="User 1 Critical",
+            quantity=3,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+        )
+        item3 = InventoryItem(
+            name="User 2 Low", quantity=7, low_stock_threshold=10, user_id=other_user.id
+        )
+        db.add_all([item1, item2, item3])
+        db.commit()
+
+        with patch(
+            "app.services.email_service.send_low_stock_alert_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ), patch(
+            "app.services.email_service.send_critical_stock_alert_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ):
+            result = await alert_service.check_and_notify_all_users(db)
+
+        assert result["total_users"] == 2
+        assert result["users_notified"] == 2
+        assert result["total_low_stock"] == 2
+        assert result["total_critical_stock"] == 1
+
+    @pytest.mark.asyncio
+    async def test_check_and_notify_all_users_handles_errors_gracefully(
+        self, db, test_user, other_user
+    ):
+        """Test that errors for one user don't stop processing others."""
+        item1 = InventoryItem(
+            name="User 1 Item",
+            quantity=7,
+            low_stock_threshold=10,
+            user_id=test_user.id,
+        )
+        item2 = InventoryItem(
+            name="User 2 Item",
+            quantity=7,
+            low_stock_threshold=10,
+            user_id=other_user.id,
+        )
+        db.add_all([item1, item2])
+        db.commit()
+
+        call_count = 0
+
+        async def side_effect(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise Exception("First user failed")
+            return True
+
+        with patch(
+            "app.services.email_service.send_low_stock_alert_email",
+            new_callable=AsyncMock,
+            side_effect=side_effect,
+        ), patch(
+            "app.services.email_service.send_critical_stock_alert_email",
+            new_callable=AsyncMock,
+            return_value=True,
+        ):
+            result = await alert_service.check_and_notify_all_users(db)
+
+        assert result["total_users"] == 2
+        assert result["users_notified"] == 1
