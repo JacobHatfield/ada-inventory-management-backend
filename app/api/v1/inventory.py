@@ -1,11 +1,12 @@
 """Inventory management API routes."""
 
+import logging
 from typing import Annotated, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import SessionLocal, get_db
 from app.dependencies import get_current_active_user
 from app.models.user import User
 from app.schemas.audit import AuditLogResponse
@@ -25,6 +26,18 @@ from app.utils.pagination import (
 )
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
+logger = logging.getLogger(__name__)
+
+
+async def check_low_stock_background(user_id: int):
+    """Background task to check low stock alerts with its own database session."""
+    db = SessionLocal()
+    try:
+        await alert_service.check_and_notify_low_stock(db, user_id)
+    except Exception as e:
+        logger.error(f"Failed to check low stock alerts for user {user_id}: {e}")
+    finally:
+        db.close()
 
 
 @router.post(
@@ -122,9 +135,10 @@ def get_inventory_item(
 
 
 @router.put("/{item_id}", response_model=InventoryItemResponse)
-def update_inventory_item(
+async def update_inventory_item(
     item_id: int,
     item_data: InventoryItemUpdate,
+    background_tasks: BackgroundTasks,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
@@ -138,6 +152,11 @@ def update_inventory_item(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Inventory item not found",
             )
+        
+        # Check if quantity was decreased, trigger alert check in background
+        if item_data.quantity is not None and inventory_service.check_low_stock(item):
+            background_tasks.add_task(check_low_stock_background, current_user.id)
+        
         return item
     except ValueError as e:
         raise HTTPException(
@@ -197,9 +216,10 @@ def increment_stock(
 
 
 @router.post("/{item_id}/decrement", response_model=InventoryItemResponse)
-def decrement_stock(
+async def decrement_stock(
     item_id: int,
     stock_update: StockUpdate,
+    background_tasks: BackgroundTasks,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
@@ -223,6 +243,11 @@ def decrement_stock(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Inventory item not found",
             )
+        
+        # Always check for low stock alerts after decrementing
+        if inventory_service.check_low_stock(item):
+            background_tasks.add_task(check_low_stock_background, current_user.id)
+        
         return item
     except ValueError as e:
         raise HTTPException(
