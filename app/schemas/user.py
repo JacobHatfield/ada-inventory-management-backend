@@ -12,6 +12,7 @@ class UserBase(BaseModel):
 
     email: EmailStr
     full_name: Optional[str] = None
+    profile_image_url: Optional[str] = None
 
 
 class UserCreate(UserBase):
@@ -34,6 +35,7 @@ class UserUpdate(BaseModel):
 
     full_name: Optional[str] = None
     email: Optional[EmailStr] = None
+    profile_image_url: Optional[str] = None
 
 
 class UserResponse(UserBase):
@@ -45,6 +47,20 @@ class UserResponse(UserBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProfileResponse(UserResponse):
+    """Extended schema for complete user profile data."""
+
+    pass
+
+
+class ProfileUpdate(BaseModel):
+    """Schema for updating user profile."""
+
+    email: Optional[EmailStr] = None
+    full_name: Optional[str] = None
+    profile_image_url: Optional[str] = None
 
 
 class UserInDB(UserResponse):
