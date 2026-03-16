@@ -4,7 +4,7 @@ uvicorn[standard]==0.32.0
 
 # Database
 sqlalchemy==2.0.35
-psycopg2-binary==2.9.9
+psycopg[binary]==3.2.10
 alembic==1.13.3
 
 # Authentication & Security

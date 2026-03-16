@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
 
     # Database Configuration
-    DATABASE_URL: str
+    DATABASE_URL: str = "postgresql+psycopg://inventory_user:inventory_password@localhost:5432/inventory_db"
 
     # JWT Configuration
     SECRET_KEY: str
@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # CORS Configuration
-    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+    BACKEND_CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 60
@@ -51,8 +51,12 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> list[str]:
-        """Convert CORS_ORIGINS string to list"""
-        return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
+        """Convert BACKEND_CORS_ORIGINS string to list"""
+        return [
+            origin.strip()
+            for origin in self.BACKEND_CORS_ORIGINS.split(",")
+            if origin.strip()
+        ]
 
 
 # Create global settings instance
