@@ -10,7 +10,8 @@ from app.core.config import settings
 from app.schemas.token import TokenPayload
 
 # Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Argon2 is the primary scheme to avoid bcrypt's 72-byte limit and compatibility issues
+pwd_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
