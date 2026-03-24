@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM_EMAIL: str = ""
     SMTP_FROM_NAME: str = "Inventory Management System"
+    SENDGRID_API_KEY: str = ""
 
     # Frontend Configuration (for password reset links)
     FRONTEND_URL: str = "http://localhost:3000"

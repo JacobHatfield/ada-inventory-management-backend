@@ -5,6 +5,14 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Optional
+import os
+
+try:
+    from sendgrid import SendGridAPIClient
+    from sendgrid.helpers.mail import Mail, Email, To, Content
+    HAS_SENDGRID = True
+except ImportError:
+    HAS_SENDGRID = False
 
 from app.core.config import settings
 
@@ -12,6 +20,10 @@ logger = logging.getLogger(__name__)
 
 
 def is_email_configured() -> bool:
+    # Check if SendGrid is configured
+    if settings.SENDGRID_API_KEY:
+        return True
+        
     # Check if all required SMTP settings are configured
     required_settings = [
         settings.SMTP_HOST,
@@ -29,12 +41,33 @@ async def send_email(
     html_body: Optional[str] = None,
 ) -> bool:
     # Send an email via SMTP with optional HTML body
+    logger.info(f"Checking email configuration: SendGrid={HAS_SENDGRID}, Configured={is_email_configured()}, API_KEY={bool(settings.SENDGRID_API_KEY)}")
     if not is_email_configured():
         logger.warning("Email not configured. Skipping email send.")
         return False
 
     try:
-        # Create message container
+        # Prefer SendGrid API if configured
+        if settings.SENDGRID_API_KEY and HAS_SENDGRID:
+            sg = SendGridAPIClient(settings.SENDGRID_API_KEY)
+            message = Mail(
+                from_email=(settings.SMTP_FROM_EMAIL or "noreply@inventory.local"),
+                to_emails=to_email,
+                subject=subject,
+                plain_text_content=body,
+                html_content=html_body
+            )
+            response = sg.send(message)
+            if response.status_code >= 200 and response.status_code < 300:
+                logger.info(f"Email sent successfully to {to_email} via SendGrid API")
+                return True
+            else:
+                logger.error(f"SendGrid API error: {response.body}")
+                # Fall back to SMTP if configured, or just return False
+                if not all([settings.SMTP_HOST, settings.SMTP_USER, settings.SMTP_PASSWORD]):
+                    return False
+
+        # Create message container for SMTP
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
         msg["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
@@ -55,7 +88,7 @@ async def send_email(
             server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
             server.send_message(msg)
 
-        logger.info(f"Email sent successfully to {to_email}")
+        logger.info(f"Email sent successfully to {to_email} via SMTP")
         return True
 
     except smtplib.SMTPAuthenticationError:
@@ -116,7 +149,7 @@ Inventory Management System
 async def send_password_reset_email(
     to_email: str,
     reset_token: str,
-    frontend_url: str = None,
+    frontend_url: Optional[str] = None,
 ) -> bool:
     """Send password reset email with reset link."""
     if frontend_url is None:
@@ -236,7 +269,7 @@ Inventory Management Team
 
 
 async def send_low_stock_alert_email(
-    to_email: str, items: list[dict], frontend_url: str = None
+    to_email: str, items: list[dict], frontend_url: Optional[str] = None
 ) -> bool:
     """Send low stock alert email with list of items needing restocking."""
     if frontend_url is None:
@@ -329,7 +362,7 @@ Inventory Management Team
 
 
 async def send_critical_stock_alert_email(
-    to_email: str, items: list[dict], frontend_url: str = None
+    to_email: str, items: list[dict], frontend_url: Optional[str] = None
 ) -> bool:
     """Send critical stock alert email for items at critically low levels."""
     if frontend_url is None:
