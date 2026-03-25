@@ -277,12 +277,6 @@ def increment_stock(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
-    """
-    Increment stock quantity for an inventory item.
-
-    Add a specified amount to the current stock quantity.
-    Optionally provide a reason for the stock change for audit purposes.
-    """
     try:
         item = inventory_service.adjust_stock_quantity(
             db,
@@ -312,13 +306,6 @@ async def decrement_stock(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
-    """
-    Decrement stock quantity for an inventory item.
-
-    Remove a specified amount from the current stock quantity.
-    Prevents negative stock - returns 400 error if operation would result in negative quantity.
-    Optionally provide a reason for the stock change for audit purposes.
-    """
     try:
         item = inventory_service.adjust_stock_quantity(
             db,
