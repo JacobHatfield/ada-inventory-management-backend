@@ -14,6 +14,7 @@ load_dotenv()
 config = context.config
 
 # Override sqlalchemy.url with value from environment
+url = os.getenv("DATABASE_URL")
 if url:
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql+psycopg://", 1)
