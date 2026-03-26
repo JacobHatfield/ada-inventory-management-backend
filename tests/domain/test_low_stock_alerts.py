@@ -332,14 +332,17 @@ class TestCheckAndNotifyLowStock:
         db.add(item)
         db.commit()
 
-        with patch(
-            "app.services.email_service.send_low_stock_alert_email",
-            new_callable=AsyncMock,
-            return_value=True,
-        ), patch(
-            "app.services.email_service.send_critical_stock_alert_email",
-            new_callable=AsyncMock,
-            return_value=True,
+        with (
+            patch(
+                "app.services.email_service.send_low_stock_alert_email",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
+            patch(
+                "app.services.email_service.send_critical_stock_alert_email",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
         ):
             result = await alert_service.check_and_notify_low_stock(db, test_user.id)
 
@@ -395,14 +398,17 @@ class TestNotifyUserLowStock:
         db.add(item)
         db.commit()
 
-        with patch(
-            "app.services.email_service.send_low_stock_alert_email",
-            new_callable=AsyncMock,
-            return_value=True,
-        ) as mock_email, patch(
-            "app.services.email_service.send_critical_stock_alert_email",
-            new_callable=AsyncMock,
-            return_value=True,
+        with (
+            patch(
+                "app.services.email_service.send_low_stock_alert_email",
+                new_callable=AsyncMock,
+                return_value=True,
+            ) as mock_email,
+            patch(
+                "app.services.email_service.send_critical_stock_alert_email",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
         ):
             result = await alert_service.notify_user_low_stock(db, test_user)
 
@@ -463,15 +469,18 @@ class TestNotifyUserLowStock:
         db.add_all([critical_item, low_item])
         db.commit()
 
-        with patch(
-            "app.services.email_service.send_low_stock_alert_email",
-            new_callable=AsyncMock,
-            return_value=True,
-        ) as mock_low, patch(
-            "app.services.email_service.send_critical_stock_alert_email",
-            new_callable=AsyncMock,
-            return_value=True,
-        ) as mock_critical:
+        with (
+            patch(
+                "app.services.email_service.send_low_stock_alert_email",
+                new_callable=AsyncMock,
+                return_value=True,
+            ) as mock_low,
+            patch(
+                "app.services.email_service.send_critical_stock_alert_email",
+                new_callable=AsyncMock,
+                return_value=True,
+            ) as mock_critical,
+        ):
             result = await alert_service.notify_user_low_stock(db, test_user)
 
         assert result["success"] is True
@@ -497,14 +506,17 @@ class TestNotifyUserLowStock:
         db.add(item)
         db.commit()
 
-        with patch(
-            "app.services.email_service.send_low_stock_alert_email",
-            new_callable=AsyncMock,
-            return_value=True,
-        ) as mock_email, patch(
-            "app.services.email_service.send_critical_stock_alert_email",
-            new_callable=AsyncMock,
-            return_value=True,
+        with (
+            patch(
+                "app.services.email_service.send_low_stock_alert_email",
+                new_callable=AsyncMock,
+                return_value=True,
+            ) as mock_email,
+            patch(
+                "app.services.email_service.send_critical_stock_alert_email",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
         ):
             await alert_service.notify_user_low_stock(db, test_user)
 
@@ -523,14 +535,17 @@ class TestNotifyUserLowStock:
         db.add(item)
         db.commit()
 
-        with patch(
-            "app.services.email_service.send_low_stock_alert_email",
-            new_callable=AsyncMock,
-            return_value=True,
-        ) as mock_email, patch(
-            "app.services.email_service.send_critical_stock_alert_email",
-            new_callable=AsyncMock,
-            return_value=True,
+        with (
+            patch(
+                "app.services.email_service.send_low_stock_alert_email",
+                new_callable=AsyncMock,
+                return_value=True,
+            ) as mock_email,
+            patch(
+                "app.services.email_service.send_critical_stock_alert_email",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
         ):
             await alert_service.notify_user_low_stock(db, test_user)
 
@@ -548,14 +563,17 @@ class TestNotifyUserLowStock:
         db.add(item)
         db.commit()
 
-        with patch(
-            "app.services.email_service.send_low_stock_alert_email",
-            new_callable=AsyncMock,
-            side_effect=Exception("Email send failed"),
-        ), patch(
-            "app.services.email_service.send_critical_stock_alert_email",
-            new_callable=AsyncMock,
-            return_value=True,
+        with (
+            patch(
+                "app.services.email_service.send_low_stock_alert_email",
+                new_callable=AsyncMock,
+                side_effect=Exception("Email send failed"),
+            ),
+            patch(
+                "app.services.email_service.send_critical_stock_alert_email",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
         ):
             result = await alert_service.notify_user_low_stock(db, test_user)
 
@@ -589,14 +607,17 @@ class TestCheckAndNotifyAllUsers:
         db.add(item)
         db.commit()
 
-        with patch(
-            "app.services.email_service.send_low_stock_alert_email",
-            new_callable=AsyncMock,
-            return_value=True,
-        ), patch(
-            "app.services.email_service.send_critical_stock_alert_email",
-            new_callable=AsyncMock,
-            return_value=True,
+        with (
+            patch(
+                "app.services.email_service.send_low_stock_alert_email",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
+            patch(
+                "app.services.email_service.send_critical_stock_alert_email",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
         ):
             result = await alert_service.check_and_notify_all_users(db)
 
@@ -624,14 +645,17 @@ class TestCheckAndNotifyAllUsers:
         db.add_all([item1, item2])
         db.commit()
 
-        with patch(
-            "app.services.email_service.send_low_stock_alert_email",
-            new_callable=AsyncMock,
-            return_value=True,
-        ), patch(
-            "app.services.email_service.send_critical_stock_alert_email",
-            new_callable=AsyncMock,
-            return_value=True,
+        with (
+            patch(
+                "app.services.email_service.send_low_stock_alert_email",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
+            patch(
+                "app.services.email_service.send_critical_stock_alert_email",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
         ):
             result = await alert_service.check_and_notify_all_users(db)
 
@@ -658,14 +682,17 @@ class TestCheckAndNotifyAllUsers:
         db.add_all([item1, item2, item3])
         db.commit()
 
-        with patch(
-            "app.services.email_service.send_low_stock_alert_email",
-            new_callable=AsyncMock,
-            return_value=True,
-        ), patch(
-            "app.services.email_service.send_critical_stock_alert_email",
-            new_callable=AsyncMock,
-            return_value=True,
+        with (
+            patch(
+                "app.services.email_service.send_low_stock_alert_email",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
+            patch(
+                "app.services.email_service.send_critical_stock_alert_email",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
         ):
             result = await alert_service.check_and_notify_all_users(db)
 
@@ -703,14 +730,17 @@ class TestCheckAndNotifyAllUsers:
                 raise Exception("First user failed")
             return True
 
-        with patch(
-            "app.services.email_service.send_low_stock_alert_email",
-            new_callable=AsyncMock,
-            side_effect=side_effect,
-        ), patch(
-            "app.services.email_service.send_critical_stock_alert_email",
-            new_callable=AsyncMock,
-            return_value=True,
+        with (
+            patch(
+                "app.services.email_service.send_low_stock_alert_email",
+                new_callable=AsyncMock,
+                side_effect=side_effect,
+            ),
+            patch(
+                "app.services.email_service.send_critical_stock_alert_email",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
         ):
             result = await alert_service.check_and_notify_all_users(db)
 
