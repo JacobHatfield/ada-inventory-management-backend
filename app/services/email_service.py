@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 def is_email_configured() -> bool:
-    # Check if SendGrid is configured
-    if settings.SENDGRID_API_KEY:
+    # Check if SendGrid is configured AND the library is installed
+    if settings.SENDGRID_API_KEY and HAS_SENDGRID:
         return True
         
     # Check if all required SMTP settings are configured
@@ -41,13 +41,12 @@ async def send_email(
     html_body: Optional[str] = None,
 ) -> bool:
     # Send an email via SMTP with optional HTML body
-    logger.info(f"Checking email configuration: SendGrid={HAS_SENDGRID}, Configured={is_email_configured()}, API_KEY={bool(settings.SENDGRID_API_KEY)}")
     if not is_email_configured():
         logger.warning("Email not configured. Skipping email send.")
         return False
 
     try:
-        # Prefer SendGrid API if configured
+        # Prefer SendGrid API if configured and library is installed
         if settings.SENDGRID_API_KEY and HAS_SENDGRID:
             sg = SendGridAPIClient(settings.SENDGRID_API_KEY)
             message = Mail(

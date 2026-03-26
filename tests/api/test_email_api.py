@@ -71,7 +71,8 @@ class TestSendTestEmail:
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         data = response.json()
-        assert "not authenticated" in data["detail"].lower()
+        # Match the detail in credentials_exception
+        assert "credentials" in data["detail"].lower()
 
     def test_send_test_email_invalid_token(self, client):
         # Test that endpoint rejects invalid authentication token

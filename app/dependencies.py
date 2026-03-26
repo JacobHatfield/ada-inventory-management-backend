@@ -12,7 +12,9 @@ from app.database import get_db
 from app.models.user import User
 
 # HTTP Bearer token scheme for Authorization header
-security = HTTPBearer()
+# Set auto_error=False so we can manually raise 401 (credentials_exception) 
+# instead of FastAPI's default 403 for missing credentials.
+security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
@@ -20,6 +22,9 @@ async def get_current_user(
     db: Annotated[Session, Depends(get_db)],
 ) -> User:
     """Get the current authenticated user from JWT token."""
+    if credentials is None:
+        raise credentials_exception
+        
     token = credentials.credentials
 
     # Decode and verify token

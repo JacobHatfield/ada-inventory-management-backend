@@ -28,6 +28,7 @@ class TestEmailConfiguration:
         mock_settings.SMTP_USER = ""
         mock_settings.SMTP_PASSWORD = ""
         mock_settings.SMTP_FROM_EMAIL = ""
+        mock_settings.SENDGRID_API_KEY = ""
 
         assert email_service.is_email_configured() is False
 
@@ -38,6 +39,7 @@ class TestEmailConfiguration:
         mock_settings.SMTP_USER = "user@example.com"
         mock_settings.SMTP_PASSWORD = ""  # Missing password
         mock_settings.SMTP_FROM_EMAIL = "noreply@example.com"
+        mock_settings.SENDGRID_API_KEY = ""
 
         assert email_service.is_email_configured() is False
 
@@ -48,9 +50,10 @@ class TestEmailSending:
     @pytest.mark.asyncio
     @patch("app.services.email_service.is_email_configured")
     @patch("app.services.email_service.smtplib.SMTP")
+    @patch("app.services.email_service.SendGridAPIClient")
     @patch("app.services.email_service.settings")
     async def test_send_email_success(
-        self, mock_settings, mock_smtp_class, mock_is_configured
+        self, mock_settings, mock_sendgrid_class, mock_smtp_class, mock_is_configured
     ):
         # Test successful email sending
         mock_is_configured.return_value = True
@@ -60,9 +63,13 @@ class TestEmailSending:
         mock_settings.SMTP_PASSWORD = "password123"
         mock_settings.SMTP_FROM_EMAIL = "noreply@example.com"
         mock_settings.SMTP_FROM_NAME = "Test System"
+        mock_settings.SENDGRID_API_KEY = ""
 
         mock_smtp = MagicMock()
         mock_smtp_class.return_value.__enter__.return_value = mock_smtp
+        
+        # Mock SendGrid response to avoid status_code comparison errors
+        mock_sendgrid_class.return_value.send.return_value.status_code = 202
 
         result = await email_service.send_email(
             to_email="recipient@example.com",
@@ -78,9 +85,10 @@ class TestEmailSending:
     @pytest.mark.asyncio
     @patch("app.services.email_service.is_email_configured")
     @patch("app.services.email_service.smtplib.SMTP")
+    @patch("app.services.email_service.SendGridAPIClient")
     @patch("app.services.email_service.settings")
     async def test_send_email_with_html_body(
-        self, mock_settings, mock_smtp_class, mock_is_configured
+        self, mock_settings, mock_sendgrid_class, mock_smtp_class, mock_is_configured
     ):
         # Test email sending with HTML body
         mock_is_configured.return_value = True
@@ -90,9 +98,13 @@ class TestEmailSending:
         mock_settings.SMTP_PASSWORD = "password123"
         mock_settings.SMTP_FROM_EMAIL = "noreply@example.com"
         mock_settings.SMTP_FROM_NAME = "Test System"
+        mock_settings.SENDGRID_API_KEY = ""
 
         mock_smtp = MagicMock()
         mock_smtp_class.return_value.__enter__.return_value = mock_smtp
+        
+        # Mock SendGrid response to avoid status_code comparison errors
+        mock_sendgrid_class.return_value.send.return_value.status_code = 202
 
         html_body = "<html><body><h1>Test</h1></body></html>"
         result = await email_service.send_email(
@@ -240,9 +252,10 @@ class TestEmailContent:
     @pytest.mark.asyncio
     @patch("app.services.email_service.is_email_configured")
     @patch("app.services.email_service.smtplib.SMTP")
+    @patch("app.services.email_service.SendGridAPIClient")
     @patch("app.services.email_service.settings")
     async def test_email_from_address_correct(
-        self, mock_settings, mock_smtp_class, mock_is_configured
+        self, mock_settings, mock_sendgrid_class, mock_smtp_class, mock_is_configured
     ):
         # Test that email From address is correctly set
         mock_is_configured.return_value = True
@@ -252,9 +265,13 @@ class TestEmailContent:
         mock_settings.SMTP_PASSWORD = "password123"
         mock_settings.SMTP_FROM_EMAIL = "noreply@example.com"
         mock_settings.SMTP_FROM_NAME = "My System"
+        mock_settings.SENDGRID_API_KEY = ""
 
         mock_smtp = MagicMock()
         mock_smtp_class.return_value.__enter__.return_value = mock_smtp
+        
+        # Mock SendGrid response to avoid status_code comparison errors
+        mock_sendgrid_class.return_value.send.return_value.status_code = 202
 
         await email_service.send_email(
             to_email="recipient@example.com",
@@ -271,9 +288,10 @@ class TestEmailContent:
     @pytest.mark.asyncio
     @patch("app.services.email_service.is_email_configured")
     @patch("app.services.email_service.smtplib.SMTP")
+    @patch("app.services.email_service.SendGridAPIClient")
     @patch("app.services.email_service.settings")
     async def test_email_subject_correct(
-        self, mock_settings, mock_smtp_class, mock_is_configured
+        self, mock_settings, mock_sendgrid_class, mock_smtp_class, mock_is_configured
     ):
         # Test that email subject is correctly set
         mock_is_configured.return_value = True
@@ -283,9 +301,13 @@ class TestEmailContent:
         mock_settings.SMTP_PASSWORD = "password123"
         mock_settings.SMTP_FROM_EMAIL = "noreply@example.com"
         mock_settings.SMTP_FROM_NAME = "Test System"
+        mock_settings.SENDGRID_API_KEY = ""
 
         mock_smtp = MagicMock()
         mock_smtp_class.return_value.__enter__.return_value = mock_smtp
+        
+        # Mock SendGrid response to avoid status_code comparison errors
+        mock_sendgrid_class.return_value.send.return_value.status_code = 202
 
         test_subject = "Important Test Email"
         await email_service.send_email(
@@ -301,9 +323,10 @@ class TestEmailContent:
     @pytest.mark.asyncio
     @patch("app.services.email_service.is_email_configured")
     @patch("app.services.email_service.smtplib.SMTP")
+    @patch("app.services.email_service.SendGridAPIClient")
     @patch("app.services.email_service.settings")
     async def test_email_to_address_correct(
-        self, mock_settings, mock_smtp_class, mock_is_configured
+        self, mock_settings, mock_sendgrid_class, mock_smtp_class, mock_is_configured
     ):
         # Test that email To address is correctly set
         mock_is_configured.return_value = True
@@ -313,9 +336,13 @@ class TestEmailContent:
         mock_settings.SMTP_PASSWORD = "password123"
         mock_settings.SMTP_FROM_EMAIL = "noreply@example.com"
         mock_settings.SMTP_FROM_NAME = "Test System"
+        mock_settings.SENDGRID_API_KEY = ""
 
         mock_smtp = MagicMock()
         mock_smtp_class.return_value.__enter__.return_value = mock_smtp
+        
+        # Mock SendGrid response to avoid status_code comparison errors
+        mock_sendgrid_class.return_value.send.return_value.status_code = 202
 
         recipient = "recipient@example.com"
         await email_service.send_email(
