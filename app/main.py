@@ -59,6 +59,15 @@ app.include_router(email.router, prefix="/api/v1")
 app.include_router(inventory.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
 
+@app.get("/")
+def read_root():
+    """Root endpoint for health check and welcome message."""
+    return {
+        "message": "Welcome to the Ada Inventory Management API",
+        "docs": "/docs",
+        "health": "/health"
+    }
+
 
 @app.get("/health")
 def health_check():
