@@ -9,8 +9,9 @@ Application configuration
 - Email configuration (optional)
 """
 
-from pydantic import field_validator
+from pydantic import field_validator, AnyHttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Union
 
 
 class Settings(BaseSettings):
@@ -27,7 +28,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # CORS Configuration
-    BACKEND_CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
+    BACKEND_CORS_ORIGINS: Union[str, list[str]] = "http://localhost:5173,http://127.0.0.1:5173"
 
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 60
@@ -55,6 +56,16 @@ class Settings(BaseSettings):
         extra="ignore"  # Ignore extra environment variables to prevent validation errors
     )
 
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Union[str, list[str]]) -> Union[str, list[str]]:
+        """Validate and parse CORS origins from string or list"""
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(",") if i.strip()]
+        elif isinstance(v, (list, str)):
+            return v
+        return []
+
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def assemble_db_url(cls, v: str) -> str:
@@ -65,12 +76,13 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> list[str]:
-        """Convert BACKEND_CORS_ORIGINS string to list and normalize (strip whitespace/trailing slashes)"""
-        return [
-            origin.strip().rstrip("/")
-            for origin in self.BACKEND_CORS_ORIGINS.split(",")
-            if origin.strip()
-        ]
+        """Convert BACKEND_CORS_ORIGINS to a clean list of strings (stripping trailing slashes)"""
+        origins = self.BACKEND_CORS_ORIGINS
+        if isinstance(origins, str):
+            # If it's still a string (though validator should have handled it), split it
+            origins = [i.strip() for i in origins.split(",") if i.strip()]
+        
+        return [str(origin).rstrip("/") for origin in origins]
 
 
 # Create global settings instance
