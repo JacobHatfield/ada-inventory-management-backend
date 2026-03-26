@@ -65,9 +65,9 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> list[str]:
-        """Convert BACKEND_CORS_ORIGINS string to list"""
+        """Convert BACKEND_CORS_ORIGINS string to list and normalize (strip whitespace/trailing slashes)"""
         return [
-            origin.strip()
+            origin.strip().rstrip("/")
             for origin in self.BACKEND_CORS_ORIGINS.split(",")
             if origin.strip()
         ]
