@@ -1,5 +1,8 @@
 """FastAPI application entry point."""
 
+import os
+from alembic.config import Config
+from alembic import command
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -12,6 +15,25 @@ app = FastAPI(
     version=settings.VERSION,
     debug=settings.DEBUG,
 )
+
+# Run database migrations on startup to ensure tables exist
+# This is more robust than relying on shell commands in Render
+try:
+    # Path to alembic.ini (it's in the project root, one level up from app/)
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    ini_path = os.path.join(base_dir, "alembic.ini")
+    
+    if os.path.exists(ini_path):
+        alembic_cfg = Config(ini_path)
+        # Ensure script_location is absolute to avoid relative path issues
+        alembic_cfg.set_main_option("script_location", os.path.join(base_dir, "alembic"))
+        command.upgrade(alembic_cfg, "head")
+        print("Successfully applied database migrations on startup.")
+    else:
+        print(f"Warning: alembic.ini not found at {ini_path}. Skipping startup migrations.")
+except Exception as e:
+    print(f"Startup migration error: {e}")
+    # In production, we might want to log this properly
 
 # Configure CORS
 origins = settings.cors_origins_list
