@@ -1,16 +1,463 @@
-"""
-Category API endpoint tests
-- Test POST /api/v1/categories (create)
-- Test POST /api/v1/categories (unauthenticated)
-- Test POST /api/v1/categories (invalid data)
-- Test GET /api/v1/categories (list all)
-- Test GET /api/v1/categories (empty list)
-- Test GET /api/v1/categories/{category_id} (get single)
-- Test GET /api/v1/categories/{category_id} (non-existent)
-- Test PUT /api/v1/categories/{category_id} (update)
-- Test PUT /api/v1/categories/{category_id} (not owned)
-- Test DELETE /api/v1/categories/{category_id}
-- Test DELETE /api/v1/categories/{category_id} (with items)
-- Test DELETE /api/v1/categories/{category_id} (not owned)
-Coverage target: >95%
-"""
+"""Category API endpoint tests."""
+
+from fastapi import status
+
+
+class TestCreateCategory:
+    """Test creating categories."""
+
+    def test_create_category_success(self, client, auth_headers, db):
+        """Test successful category creation."""
+        response = client.post(
+            "/api/v1/categories/",
+            json={
+                "name": "Electronics",
+                "description": "Electronic items and gadgets",
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        data = response.json()
+        assert data["name"] == "Electronics"
+        assert data["description"] == "Electronic items and gadgets"
+        assert "id" in data
+        assert "user_id" in data
+        assert "created_at" in data
+        assert "updated_at" in data
+
+    def test_create_category_unauthenticated(self, client):
+        """Test that authentication is required."""
+        response = client.post(
+            "/api/v1/categories/",
+            json={
+                "name": "Unauthorized Category",
+                "description": "No auth header",
+            },
+        )
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_create_category_missing_required_field(self, client, auth_headers):
+        """Test validation for missing required fields."""
+        response = client.post(
+            "/api/v1/categories/",
+            json={
+                "description": "Missing name field",
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_create_category_with_empty_name(self, client, auth_headers):
+        """Test that empty name is rejected (min_length validation)."""
+        response = client.post(
+            "/api/v1/categories/",
+            json={
+                "name": "",
+                "description": "Empty name should fail",
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+class TestGetCategories:
+    """Test listing categories."""
+
+    def test_get_categories_success(self, client, auth_headers, db, test_user):
+        """Test successful retrieval of category list."""
+        # Create 3 categories for test_user
+        from app.models.category import Category
+
+        categories = [
+            Category(
+                name=f"Category {chr(65 + i)}",  # A, B, C
+                description=f"Description {i}",
+                user_id=test_user.id,
+            )
+            for i in range(3)
+        ]
+        for cat in categories:
+            db.add(cat)
+        db.commit()
+
+        response = client.get("/api/v1/categories/", headers=auth_headers)
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert "items" in data
+        assert "total" in data
+        assert data["total"] == 3
+        assert len(data["items"]) == 3
+        assert all(cat["user_id"] == test_user.id for cat in data["items"])
+        # Verify ordered by name (alphabetically)
+        assert data["items"][0]["name"] == "Category A"
+        assert data["items"][1]["name"] == "Category B"
+        assert data["items"][2]["name"] == "Category C"
+
+    def test_get_categories_empty_list(self, client, auth_headers):
+        """Test retrieving empty category list."""
+        response = client.get("/api/v1/categories/", headers=auth_headers)
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["items"] == []
+        assert data["total"] == 0
+
+    def test_get_categories_only_own_categories(
+        self, client, auth_headers, db, test_user, other_user
+    ):
+        """Test user can only see their own categories."""
+        from app.models.category import Category
+
+        # Create 2 categories for test_user
+        for i in range(2):
+            cat = Category(
+                name=f"Test User Category {i}",
+                description=f"Test user's category {i}",
+                user_id=test_user.id,
+            )
+            db.add(cat)
+
+        # Create 2 categories for other_user
+        for i in range(2):
+            cat = Category(
+                name=f"Other User Category {i}",
+                description=f"Other user's category {i}",
+                user_id=other_user.id,
+            )
+            db.add(cat)
+        db.commit()
+
+        # Request with test_user's auth
+        response = client.get("/api/v1/categories/", headers=auth_headers)
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["total"] == 2
+        assert len(data["items"]) == 2
+        # Verify all categories belong to test_user
+        assert all(cat["user_id"] == test_user.id for cat in data["items"])
+        # Verify none belong to other_user
+        assert all(cat["user_id"] != other_user.id for cat in data["items"])
+
+
+class TestGetCategoryById:
+    """Test getting a single category by ID."""
+
+    def test_get_category_by_id_success(
+        self, client, auth_headers, test_category, test_user
+    ):
+        """Test successful retrieval of a category by ID."""
+        response = client.get(
+            f"/api/v1/categories/{test_category.id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["id"] == test_category.id
+        assert data["name"] == test_category.name
+        assert data["description"] == test_category.description
+        assert data["user_id"] == test_user.id
+        assert "created_at" in data
+        assert "updated_at" in data
+
+    def test_get_category_not_found(self, client, auth_headers):
+        """Test getting a non-existent category returns 404."""
+        response = client.get(
+            "/api/v1/categories/99999",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        data = response.json()
+        assert data["detail"] == "Category not found"
+
+    def test_get_category_not_owned(self, client, auth_headers, other_user_category):
+        """Test user cannot access another user's category."""
+        response = client.get(
+            f"/api/v1/categories/{other_user_category.id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        data = response.json()
+        assert data["detail"] == "Category not found"
+
+
+class TestUpdateCategory:
+    """Test updating categories."""
+
+    def test_update_category_success(self, client, auth_headers, test_category):
+        """Test successful category update."""
+        response = client.put(
+            f"/api/v1/categories/{test_category.id}",
+            json={
+                "name": "Updated Electronics",
+                "description": "Updated description for electronics",
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["id"] == test_category.id
+        assert data["name"] == "Updated Electronics"
+        assert data["description"] == "Updated description for electronics"
+        assert "updated_at" in data
+
+    def test_update_category_not_found(self, client, auth_headers):
+        """Test updating a non-existent category returns 404."""
+        response = client.put(
+            "/api/v1/categories/99999",
+            json={
+                "name": "Won't Work",
+                "description": "This category doesn't exist",
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        data = response.json()
+        assert data["detail"] == "Category not found"
+
+    def test_update_category_not_owned(self, client, auth_headers, other_user_category):
+        """Test user cannot update another user's category."""
+        response = client.put(
+            f"/api/v1/categories/{other_user_category.id}",
+            json={
+                "name": "Hacked Category",
+                "description": "Trying to hack another user's category",
+            },
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        data = response.json()
+        assert data["detail"] == "Category not found"
+
+
+class TestDeleteCategory:
+    """Test deleting categories."""
+
+    def test_delete_category_success(self, client, auth_headers, test_category):
+        """Test successful category deletion."""
+        category_id = test_category.id
+
+        # Delete the category
+        response = client.delete(
+            f"/api/v1/categories/{category_id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+
+        # Verify category is deleted (GET should return 404)
+        verify_response = client.get(
+            f"/api/v1/categories/{category_id}",
+            headers=auth_headers,
+        )
+        assert verify_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_delete_category_not_found(self, client, auth_headers):
+        """Test deleting a non-existent category returns 404."""
+        response = client.delete(
+            "/api/v1/categories/99999",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        data = response.json()
+        assert data["detail"] == "Category not found"
+
+    def test_delete_category_not_owned(self, client, auth_headers, other_user_category):
+        """Test user cannot delete another user's category."""
+        response = client.delete(
+            f"/api/v1/categories/{other_user_category.id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        data = response.json()
+        assert data["detail"] == "Category not found"
+
+
+class TestCategoryPagination:
+    """Test pagination functionality for category endpoints."""
+
+    def test_pagination_metadata_structure(self, client, auth_headers, db, test_user):
+        """Test that paginated response includes correct metadata structure."""
+        from app.models.category import Category
+
+        # Create multiple categories
+        for i in range(5):
+            category = Category(
+                name=f"Category {i}",
+                description=f"Description {i}",
+                user_id=test_user.id,
+            )
+            db.add(category)
+        db.commit()
+
+        response = client.get("/api/v1/categories/?page_size=3", headers=auth_headers)
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+
+        # Verify response structure
+        assert "items" in data
+        assert "total" in data
+        assert "page" in data
+        assert "page_size" in data
+        assert "total_pages" in data
+
+        # Verify metadata values
+        assert data["total"] == 5
+        assert data["page"] == 1
+        assert data["page_size"] == 3
+        assert data["total_pages"] == 2
+        assert len(data["items"]) == 3
+
+    def test_pagination_with_page_parameter(self, client, auth_headers, db, test_user):
+        """Test navigating through pages using page parameter."""
+        from app.models.category import Category
+
+        # Create 10 categories
+        for i in range(10):
+            category = Category(
+                name=f"Category {i:02d}",
+                description=f"Description {i}",
+                user_id=test_user.id,
+            )
+            db.add(category)
+        db.commit()
+
+        # Get first page
+        response = client.get(
+            "/api/v1/categories/?page=1&page_size=4", headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_200_OK
+        page1_data = response.json()
+        assert page1_data["page"] == 1
+        assert page1_data["page_size"] == 4
+        assert page1_data["total"] == 10
+        assert page1_data["total_pages"] == 3
+        assert len(page1_data["items"]) == 4
+
+        # Get second page
+        response = client.get(
+            "/api/v1/categories/?page=2&page_size=4", headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_200_OK
+        page2_data = response.json()
+        assert page2_data["page"] == 2
+        assert len(page2_data["items"]) == 4
+
+        # Get third page (partial)
+        response = client.get(
+            "/api/v1/categories/?page=3&page_size=4", headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_200_OK
+        page3_data = response.json()
+        assert page3_data["page"] == 3
+        assert len(page3_data["items"]) == 2
+
+        # Verify categories are different across pages
+        page1_ids = {item["id"] for item in page1_data["items"]}
+        page2_ids = {item["id"] for item in page2_data["items"]}
+        page3_ids = {item["id"] for item in page3_data["items"]}
+        assert len(page1_ids & page2_ids) == 0  # No overlap
+        assert len(page2_ids & page3_ids) == 0  # No overlap
+
+    def test_pagination_multiple_pages(self, client, auth_headers, db, test_user):
+        """Test pagination with items spanning multiple pages."""
+        from app.models.category import Category
+
+        # Create 7 categories
+        for i in range(7):
+            category = Category(
+                name=f"Category {i}",
+                description=f"Description {i}",
+                user_id=test_user.id,
+            )
+            db.add(category)
+        db.commit()
+
+        # Request with page_size=3 should give 3 pages (3, 3, 1)
+        response = client.get("/api/v1/categories/?page_size=3", headers=auth_headers)
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["total"] == 7
+        assert data["page_size"] == 3
+        assert data["total_pages"] == 3
+        assert len(data["items"]) == 3
+
+        # Get last page
+        response = client.get(
+            "/api/v1/categories/?page=3&page_size=3", headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["page"] == 3
+        assert len(data["items"]) == 1
+
+    def test_pagination_default_page_size(self, client, auth_headers, db, test_user):
+        """Test that default page_size is applied when not specified."""
+        from app.models.category import Category
+
+        # Create 5 categories
+        for i in range(5):
+            category = Category(
+                name=f"Category {i}",
+                description=f"Description {i}",
+                user_id=test_user.id,
+            )
+            db.add(category)
+        db.commit()
+
+        # Request without page_size should use default (100)
+        response = client.get("/api/v1/categories/", headers=auth_headers)
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["page"] == 1
+        assert data["page_size"] == 100  # DEFAULT_PAGE_SIZE
+        assert data["total"] == 5
+        assert data["total_pages"] == 1
+        assert len(data["items"]) == 5
+
+    def test_pagination_empty_results(self, client, auth_headers):
+        """Test pagination with no categories."""
+        response = client.get(
+            "/api/v1/categories/?page=1&page_size=10", headers=auth_headers
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["total"] == 0
+        assert data["page"] == 1
+        assert data["page_size"] == 10
+        assert data["total_pages"] == 0
+        assert len(data["items"]) == 0
+
+    def test_delete_category_with_items(self, client, auth_headers, db, test_user):
+        """Test that category with items cannot be deleted."""
+        from app.models.category import Category
+        from app.models.inventory import InventoryItem
+
+        # Create a category
+        category = Category(
+            name="Category with Items",
+            description="This category has inventory items",
+            user_id=test_user.id,
+        )
+        db.add(category)
+        db.commit()
+        db.refresh(category)
+
+        # Create an inventory item in this category
+        item = InventoryItem(
+            name="Test Item",
+            description="Item in category",
+            quantity=10,
+            category_id=category.id,
+            user_id=test_user.id,
+        )
+        db.add(item)
+        db.commit()
+
+        # Try to delete the category (should fail)
+        response = client.delete(
+            f"/api/v1/categories/{category.id}",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        data = response.json()
+        assert "Cannot delete category with existing inventory items" in data["detail"]
