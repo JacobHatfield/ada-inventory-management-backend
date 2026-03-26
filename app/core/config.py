@@ -58,12 +58,18 @@ class Settings(BaseSettings):
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
-    def assemble_cors_origins(cls, v: Union[str, list[str]]) -> Union[str, list[str]]:
+    def assemble_cors_origins(cls, v: Union[str, list[str]]) -> list[str]:
         """Validate and parse CORS origins from string or list"""
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",") if i.strip()]
-        elif isinstance(v, (list, str)):
+        elif isinstance(v, list):
             return v
+        elif isinstance(v, str) and v.startswith("["):
+            import json
+            try:
+                return json.loads(v)
+            except Exception:
+                return [v]
         return []
 
     @field_validator("DATABASE_URL", mode="before")
@@ -79,10 +85,9 @@ class Settings(BaseSettings):
         """Convert BACKEND_CORS_ORIGINS to a clean list of strings (stripping trailing slashes)"""
         origins = self.BACKEND_CORS_ORIGINS
         if isinstance(origins, str):
-            # If it's still a string (though validator should have handled it), split it
-            origins = [i.strip() for i in origins.split(",") if i.strip()]
+            return [origins.strip().rstrip("/")]
         
-        return [str(origin).rstrip("/") for origin in origins]
+        return [str(origin).strip().rstrip("/") for origin in origins]
 
 
 # Create global settings instance
