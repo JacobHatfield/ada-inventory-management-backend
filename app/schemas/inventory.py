@@ -3,8 +3,7 @@
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import (BaseModel, ConfigDict, Field, computed_field,
-                      field_validator)
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
 from app.schemas.category import CategoryResponse
 

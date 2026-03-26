@@ -67,7 +67,7 @@ class TestEmailSending:
 
         mock_smtp = MagicMock()
         mock_smtp_class.return_value.__enter__.return_value = mock_smtp
-        
+
         # Mock SendGrid response to avoid status_code comparison errors
         mock_sendgrid_class.return_value.send.return_value.status_code = 202
 
@@ -102,7 +102,7 @@ class TestEmailSending:
 
         mock_smtp = MagicMock()
         mock_smtp_class.return_value.__enter__.return_value = mock_smtp
-        
+
         # Mock SendGrid response to avoid status_code comparison errors
         mock_sendgrid_class.return_value.send.return_value.status_code = 202
 
@@ -269,7 +269,7 @@ class TestEmailContent:
 
         mock_smtp = MagicMock()
         mock_smtp_class.return_value.__enter__.return_value = mock_smtp
-        
+
         # Mock SendGrid response to avoid status_code comparison errors
         mock_sendgrid_class.return_value.send.return_value.status_code = 202
 
@@ -305,7 +305,7 @@ class TestEmailContent:
 
         mock_smtp = MagicMock()
         mock_smtp_class.return_value.__enter__.return_value = mock_smtp
-        
+
         # Mock SendGrid response to avoid status_code comparison errors
         mock_sendgrid_class.return_value.send.return_value.status_code = 202
 
@@ -340,7 +340,7 @@ class TestEmailContent:
 
         mock_smtp = MagicMock()
         mock_smtp_class.return_value.__enter__.return_value = mock_smtp
-        
+
         # Mock SendGrid response to avoid status_code comparison errors
         mock_sendgrid_class.return_value.send.return_value.status_code = 202
 

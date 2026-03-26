@@ -98,7 +98,7 @@ class TestStockUpdateSchema:
         """Test that negative quantity_change is rejected (users provide positive values)."""
         with pytest.raises(ValidationError) as exc_info:
             StockUpdate(quantity_change=-5)
-        
+
         errors = exc_info.value.errors()
         assert len(errors) == 1
         # Field constraint gt=0 rejects negative values

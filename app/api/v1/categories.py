@@ -8,11 +8,13 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_current_active_user
 from app.models.user import User
-from app.schemas.category import (CategoryCreate, CategoryResponse,
-                                  CategoryUpdate)
+from app.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
 from app.services import category_service
-from app.utils.pagination import (PaginatedResponse, calculate_total_pages,
-                                  get_pagination_params)
+from app.utils.pagination import (
+    PaginatedResponse,
+    calculate_total_pages,
+    get_pagination_params,
+)
 
 router = APIRouter(prefix="/categories", tags=["categories"])
 

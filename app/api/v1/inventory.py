@@ -3,20 +3,27 @@
 import logging
 from typing import Annotated, Literal, Optional
 
-from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException, Query,
-                     status)
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal, get_db
 from app.dependencies import get_current_active_user
 from app.models.user import User
 from app.schemas.audit import AuditLogResponse
-from app.schemas.inventory import (AlertCheckResponse, InventoryItemCreate,
-                                   InventoryItemResponse, InventoryItemUpdate,
-                                   StockSummaryResponse, StockUpdate)
+from app.schemas.inventory import (
+    AlertCheckResponse,
+    InventoryItemCreate,
+    InventoryItemResponse,
+    InventoryItemUpdate,
+    StockSummaryResponse,
+    StockUpdate,
+)
 from app.services import alert_service, audit_service, inventory_service
-from app.utils.pagination import (PaginatedResponse, calculate_total_pages,
-                                  get_pagination_params)
+from app.utils.pagination import (
+    PaginatedResponse,
+    calculate_total_pages,
+    get_pagination_params,
+)
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 logger = logging.getLogger(__name__)

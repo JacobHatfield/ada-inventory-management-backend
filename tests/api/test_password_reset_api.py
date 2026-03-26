@@ -701,8 +701,8 @@ class TestPasswordResetSecurityAndEdgeCases:
 
     def test_multiple_users_password_reset_isolation(self, client, db, test_user):
         """Test that password reset tokens are properly isolated between users."""
-        from app.models.user import User
         from app.core.security import hash_password
+        from app.models.user import User
 
         # Create second user
         user2 = User(

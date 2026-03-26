@@ -5,11 +5,11 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Optional
-import os
 
 try:
     from sendgrid import SendGridAPIClient
-    from sendgrid.helpers.mail import Mail, Email, To, Content
+    from sendgrid.helpers.mail import Mail
+
     HAS_SENDGRID = True
 except ImportError:
     HAS_SENDGRID = False
@@ -23,7 +23,7 @@ def is_email_configured() -> bool:
     # Check if SendGrid is configured AND the library is installed
     if settings.SENDGRID_API_KEY and HAS_SENDGRID:
         return True
-        
+
     # Check if all required SMTP settings are configured
     required_settings = [
         settings.SMTP_HOST,
@@ -54,7 +54,7 @@ async def send_email(
                 to_emails=to_email,
                 subject=subject,
                 plain_text_content=body,
-                html_content=html_body
+                html_content=html_body,
             )
             response = sg.send(message)
             if response.status_code >= 200 and response.status_code < 300:
@@ -63,7 +63,9 @@ async def send_email(
             else:
                 logger.error(f"SendGrid API error: {response.body}")
                 # Fall back to SMTP if configured, or just return False
-                if not all([settings.SMTP_HOST, settings.SMTP_USER, settings.SMTP_PASSWORD]):
+                if not all(
+                    [settings.SMTP_HOST, settings.SMTP_USER, settings.SMTP_PASSWORD]
+                ):
                     return False
 
         # Create message container for SMTP

@@ -3,10 +3,16 @@
 import pytest
 from pydantic import BaseModel
 
-from app.utils.pagination import (DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE,
-                                  MIN_PAGE_SIZE, PaginatedResponse,
-                                  calculate_total_pages, get_pagination_params,
-                                  offset_to_page, page_to_offset)
+from app.utils.pagination import (
+    DEFAULT_PAGE_SIZE,
+    MAX_PAGE_SIZE,
+    MIN_PAGE_SIZE,
+    PaginatedResponse,
+    calculate_total_pages,
+    get_pagination_params,
+    offset_to_page,
+    page_to_offset,
+)
 
 
 class TestCalculateTotalPages:

@@ -16,7 +16,9 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
 
     # Database Configuration
-    DATABASE_URL: str = "postgresql+psycopg://inventory_user:inventory_password@localhost:5432/inventory_db"
+    DATABASE_URL: str = (
+        "postgresql+psycopg://inventory_user:inventory_password@localhost:5432/inventory_db"
+    )
 
     # JWT Configuration
     SECRET_KEY: str

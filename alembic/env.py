@@ -1,9 +1,8 @@
-from logging.config import fileConfig
 import os
-from dotenv import load_dotenv
+from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from dotenv import load_dotenv
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
@@ -23,9 +22,9 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import Base from database to get all model metadata
-from app.database import Base
+from app.database import Base  # noqa: E402
+
 # Import all models so they're registered with Base
-from app.models import user, category, inventory, audit, password_reset
 
 # Set target metadata for autogenerate support
 target_metadata = Base.metadata
@@ -74,9 +73,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
