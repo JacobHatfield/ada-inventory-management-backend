@@ -3,6 +3,7 @@ services:
     name: inventory-backend
     env: python
     buildCommand: pip install -r requirements.txt
+    preDeployCommand: alembic upgrade head
     startCommand: gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app
     envVars:
       - key: DATABASE_URL

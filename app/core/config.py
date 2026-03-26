@@ -58,19 +58,22 @@ class Settings(BaseSettings):
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
-    def assemble_cors_origins(cls, v: Union[str, list[str]]) -> list[str]:
-        """Validate and parse CORS origins from string or list"""
+    def assemble_cors_origins(cls, v: Union[str, list[str], None]) -> Union[str, list[str]]:
+        """Validate and parse CORS origins from string, list, or JSON string"""
+        if v is None:
+            return []
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",") if i.strip()]
-        elif isinstance(v, list):
+        if isinstance(v, list):
             return v
-        elif isinstance(v, str) and v.startswith("["):
+        if isinstance(v, str) and v.startswith("["):
             import json
             try:
                 return json.loads(v)
             except Exception:
+                # Fallback to single string if JSON parsing fails
                 return [v]
-        return []
+        return v
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
@@ -85,8 +88,11 @@ class Settings(BaseSettings):
         """Convert BACKEND_CORS_ORIGINS to a clean list of strings (stripping trailing slashes)"""
         origins = self.BACKEND_CORS_ORIGINS
         if isinstance(origins, str):
+            if origins == "*":
+                return ["*"]
             return [origins.strip().rstrip("/")]
         
+        # Handle case where list elements might be Pydantic URL objects or strings
         return [str(origin).strip().rstrip("/") for origin in origins]
 
 
