@@ -9,6 +9,7 @@ Application configuration
 - Email configuration (optional)
 """
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -53,6 +54,14 @@ class Settings(BaseSettings):
         case_sensitive=True,
         extra="ignore"  # Ignore extra environment variables to prevent validation errors
     )
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_db_url(cls, v: str) -> str:
+        """Ensure DATABASE_URL uses the +psycopg driver for SQLAlchemy 2.0/psycopg3 compatibility"""
+        if isinstance(v, str) and v.startswith("postgresql://"):
+            return v.replace("postgresql://", "postgresql+psycopg://", 1)
+        return v
 
     @property
     def cors_origins_list(self) -> list[str]:
