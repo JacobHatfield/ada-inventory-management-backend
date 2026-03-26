@@ -14,9 +14,13 @@ load_dotenv()
 config = context.config
 
 # Override sqlalchemy.url with value from environment
-url = os.getenv("DATABASE_URL")
-if url and url.startswith("postgresql://"):
-    url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+if url:
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+psycopg://", 1)
+    elif url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+    elif url.startswith("postgresql") and "+psycopg" not in url:
+        url = url.replace("postgresql", "postgresql+psycopg", 1)
 config.set_main_option("sqlalchemy.url", url)
 
 # Interpret the config file for Python logging.

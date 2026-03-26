@@ -79,8 +79,15 @@ class Settings(BaseSettings):
     @classmethod
     def assemble_db_url(cls, v: str) -> str:
         """Ensure DATABASE_URL uses the +psycopg driver for SQLAlchemy 2.0/psycopg3 compatibility"""
-        if isinstance(v, str) and v.startswith("postgresql://"):
-            return v.replace("postgresql://", "postgresql+psycopg://", 1)
+        if isinstance(v, str):
+            # Handle both postgres:// (legacy) and postgresql:// prefixes
+            if v.startswith("postgres://"):
+                v = v.replace("postgres://", "postgresql+psycopg://", 1)
+            elif v.startswith("postgresql://"):
+                v = v.replace("postgresql://", "postgresql+psycopg://", 1)
+            # Ensure it has +psycopg if it's already postgresql:// but without driver
+            elif v.startswith("postgresql") and "+psycopg" not in v:
+                v = v.replace("postgresql", "postgresql+psycopg", 1)
         return v
 
     @property
