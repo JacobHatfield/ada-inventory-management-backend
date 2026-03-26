@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: inventory-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: inventory-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 60
+      - key: ALGORITHM
+        value: HS256
+      - key: BACKEND_CORS_ORIGINS
+        value: "*" # Update this with your frontend URL later
+
+databases:
+  - name: inventory-db
+    plan: free # Change to starter if needed
+    region: frankfurt # Or your preferred region
