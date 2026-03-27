@@ -93,7 +93,7 @@ The project follows a strict Three-Layer Architecture for clear separation of co
 
 ## Testing
 
-The project maintains a 94% test coverage across 401 test cases.
+The project maintains a 96% test coverage across 410 test cases.
 
 ### Running Tests
 ```bash
