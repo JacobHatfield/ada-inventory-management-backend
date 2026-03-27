@@ -46,7 +46,9 @@ async def get_email_status():
         "is_configured": is_email_configured(),
         "has_sendgrid_library": HAS_SENDGRID,
         "api_key_set": bool(settings.SENDGRID_API_KEY),
+        "api_key_preview": f"{settings.SENDGRID_API_KEY[:6]}...{settings.SENDGRID_API_KEY[-3:]}" if settings.SENDGRID_API_KEY else None,
         "from_email_set": bool(settings.SMTP_FROM_EMAIL),
+        "from_email": settings.SMTP_FROM_EMAIL,
         "smtp_host_set": bool(settings.SMTP_HOST),
         "last_error": None,
     }
