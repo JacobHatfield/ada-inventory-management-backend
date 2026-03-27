@@ -96,7 +96,7 @@ class Settings(BaseSettings):
                 v = v.replace("postgresql", "postgresql+psycopg", 1)
         return v
 
-    @field_validator("SENDGRID_API_KEY", "SMTP_FROM_EMAIL", mode="before")
+    @field_validator("SENDGRID_API_KEY", "SMTP_FROM_EMAIL", "FRONTEND_URL", mode="before")
     @classmethod
     def strip_whitespace(cls, v: str) -> str:
         """Strip whitespace and quotes from critical strings to prevent copy-paste errors"""

@@ -25,6 +25,8 @@ services:
         value: HS256
       - key: BACKEND_CORS_ORIGINS
         value: "*" # Update this with your frontend URL later
+      - key: FRONTEND_URL
+        sync: false # Set this to your production frontend URL (e.g., https://ada-inventory-management.onrender.com)
       - key: SENDGRID_API_KEY
         sync: false # Set this in the Render dashboard
       - key: SMTP_FROM_EMAIL
