@@ -31,6 +31,23 @@ from app.services.auth_service import (
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
+@router.get("/email-status")
+def get_email_status():
+    """
+    Check if email service is configured (for debugging).
+    """
+    from app.services.email_service import HAS_SENDGRID, is_email_configured
+    from app.core.config import settings
+
+    return {
+        "is_configured": is_email_configured(),
+        "has_sendgrid_library": HAS_SENDGRID,
+        "api_key_set": bool(settings.SENDGRID_API_KEY),
+        "from_email_set": bool(settings.SMTP_FROM_EMAIL),
+        "smtp_host_set": bool(settings.SMTP_HOST),
+    }
+
+
 @router.post(
     "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
 )
