@@ -32,20 +32,45 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.get("/email-status")
-def get_email_status():
+async def get_email_status():
     """
-    Check if email service is configured (for debugging).
+    Check if email service is configured and try a dummy send (for debugging).
     """
-    from app.services.email_service import HAS_SENDGRID, is_email_configured
-    from app.core.config import settings
+    from sendgrid import SendGridAPIClient
+    from sendgrid.helpers.mail import Mail
 
-    return {
+    from app.core.config import settings
+    from app.services.email_service import HAS_SENDGRID, is_email_configured
+
+    status = {
         "is_configured": is_email_configured(),
         "has_sendgrid_library": HAS_SENDGRID,
         "api_key_set": bool(settings.SENDGRID_API_KEY),
         "from_email_set": bool(settings.SMTP_FROM_EMAIL),
         "smtp_host_set": bool(settings.SMTP_HOST),
+        "last_error": None,
     }
+
+    if status["is_configured"]:
+        try:
+            sg = SendGridAPIClient(settings.SENDGRID_API_KEY)
+            message = Mail(
+                from_email=settings.SMTP_FROM_EMAIL,
+                to_emails="test@example.com",
+                subject="Diagnostic Test",
+                plain_text_content="This is a diagnostic test.",
+            )
+            # We use a dry run/check or just try to send and catch the error
+            # SendGrid doesn't have a specific 'validate key' endpoint that is easy, 
+            # so we just try to send.
+            response = sg.send(message)
+            status["response_code"] = response.status_code
+            if response.status_code >= 400:
+                status["last_error"] = str(response.body)
+        except Exception as e:
+            status["last_error"] = str(e)
+
+    return status
 
 
 @router.post(
