@@ -99,9 +99,10 @@ class Settings(BaseSettings):
     @field_validator("SENDGRID_API_KEY", "SMTP_FROM_EMAIL", mode="before")
     @classmethod
     def strip_whitespace(cls, v: str) -> str:
-        """Strip whitespace from critical strings to prevent copy-paste errors"""
+        """Strip whitespace and quotes from critical strings to prevent copy-paste errors"""
         if isinstance(v, str):
-            return v.strip()
+            # Strip whitespace then strip both single and double quotes
+            return v.strip().strip("'").strip('"')
         return v
 
     @property

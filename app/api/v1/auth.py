@@ -46,6 +46,7 @@ async def get_email_status():
         "is_configured": is_email_configured(),
         "has_sendgrid_library": HAS_SENDGRID,
         "api_key_set": bool(settings.SENDGRID_API_KEY),
+        "api_key_length": len(settings.SENDGRID_API_KEY) if settings.SENDGRID_API_KEY else 0,
         "api_key_preview": f"{settings.SENDGRID_API_KEY[:6]}...{settings.SENDGRID_API_KEY[-3:]}" if settings.SENDGRID_API_KEY else None,
         "from_email_set": bool(settings.SMTP_FROM_EMAIL),
         "from_email": settings.SMTP_FROM_EMAIL,
@@ -62,15 +63,21 @@ async def get_email_status():
                 subject="Diagnostic Test",
                 plain_text_content="This is a diagnostic test.",
             )
-            # We use a dry run/check or just try to send and catch the error
-            # SendGrid doesn't have a specific 'validate key' endpoint that is easy, 
-            # so we just try to send.
             response = sg.send(message)
             status["response_code"] = response.status_code
+            status["response_headers"] = str(response.headers)
             if response.status_code >= 400:
                 status["last_error"] = str(response.body)
         except Exception as e:
             status["last_error"] = str(e)
+            # Try to get headers from the exception if it's an HTTP error
+            try:
+                if hasattr(e, 'headers'):
+                    status["error_headers"] = str(e.headers)
+                if hasattr(e, 'body'):
+                    status["error_body"] = str(e.body)
+            except:
+                pass
 
     return status
 
