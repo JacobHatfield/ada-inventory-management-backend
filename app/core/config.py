@@ -96,6 +96,14 @@ class Settings(BaseSettings):
                 v = v.replace("postgresql", "postgresql+psycopg", 1)
         return v
 
+    @field_validator("SENDGRID_API_KEY", "SMTP_FROM_EMAIL", mode="before")
+    @classmethod
+    def strip_whitespace(cls, v: str) -> str:
+        """Strip whitespace from critical strings to prevent copy-paste errors"""
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
     @property
     def cors_origins_list(self) -> list[str]:
         """Convert BACKEND_CORS_ORIGINS to a clean list of strings (stripping trailing slashes)"""
