@@ -9,7 +9,7 @@ from app.services import audit_service, inventory_service
 
 
 class TestAuditServiceFunctions:
-    """Test audit service functions directly."""
+    """Audit service tests."""
 
     def test_create_audit_log_success(self, db, test_user, test_inventory_item):
         """Test creating an audit log with all required fields."""
@@ -136,7 +136,7 @@ class TestAuditServiceFunctions:
 
 
 class TestItemCreationAudit:
-    """Test audit logging during item creation."""
+    """Creation audit tests."""
 
     def test_create_item_generates_audit_log(self, db, test_user):
         """Test that creating an item generates an audit log."""
@@ -212,7 +212,7 @@ class TestItemCreationAudit:
 
 
 class TestItemUpdateAudit:
-    """Test audit logging during item updates."""
+    """Update audit tests."""
 
     def test_update_item_generates_audit_log(self, db, test_user, test_inventory_item):
         """Test that updating an item generates audit logs."""
@@ -332,7 +332,7 @@ class TestItemUpdateAudit:
 
 
 class TestStockAdjustmentAudit:
-    """Test audit logging during stock adjustments."""
+    """Adjustment audit tests."""
 
     def test_increment_stock_generates_audit_log(
         self, db, test_user, test_inventory_item
@@ -480,7 +480,7 @@ class TestStockAdjustmentAudit:
 
 
 class TestItemDeletionAudit:
-    """Test audit logging during item deletion."""
+    """Deletion audit tests."""
 
     def test_delete_item_generates_audit_log(self, db, test_user, test_inventory_item):
         """Test that deleting an item creates an audit log."""
@@ -558,7 +558,7 @@ class TestItemDeletionAudit:
 
 
 class TestAuditEdgeCases:
-    """Test edge cases and special scenarios for audit logging."""
+    """Edge case tests."""
 
     def test_audit_log_with_null_values(self, db, test_user, test_inventory_item):
         """Test creating audit log with null optional fields."""

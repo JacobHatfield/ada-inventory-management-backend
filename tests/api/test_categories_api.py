@@ -4,7 +4,7 @@ from fastapi import status
 
 
 class TestCreateCategory:
-    """Test creating categories."""
+    """Category creation tests."""
 
     def test_create_category_success(self, client, auth_headers, db):
         """Test successful category creation."""
@@ -61,7 +61,7 @@ class TestCreateCategory:
 
 
 class TestGetCategories:
-    """Test listing categories."""
+    """Category list retrieval tests."""
 
     def test_get_categories_success(self, client, auth_headers, db, test_user):
         """Test successful retrieval of category list."""
@@ -139,7 +139,7 @@ class TestGetCategories:
 
 
 class TestGetCategoryById:
-    """Test getting a single category by ID."""
+    """Single category retrieval tests."""
 
     def test_get_category_by_id_success(
         self, client, auth_headers, test_category, test_user
@@ -180,7 +180,7 @@ class TestGetCategoryById:
 
 
 class TestUpdateCategory:
-    """Test updating categories."""
+    """Category update tests."""
 
     def test_update_category_success(self, client, auth_headers, test_category):
         """Test successful category update."""
@@ -229,7 +229,7 @@ class TestUpdateCategory:
 
 
 class TestDeleteCategory:
-    """Test deleting categories."""
+    """Category deletion tests."""
 
     def test_delete_category_success(self, client, auth_headers, test_category):
         """Test successful category deletion."""
@@ -271,7 +271,7 @@ class TestDeleteCategory:
 
 
 class TestCategoryPagination:
-    """Test pagination functionality for category endpoints."""
+    """Category pagination tests."""
 
     def test_pagination_metadata_structure(self, client, auth_headers, db, test_user):
         """Test that paginated response includes correct metadata structure."""

@@ -26,7 +26,7 @@ def update_profile(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
-    """Update the current user's profile (email, full_name, profile_image_url)."""
+    """Update the current user's profile."""
     try:
         updated_user = user_service.update_user_profile(
             db,

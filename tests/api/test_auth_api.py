@@ -11,7 +11,7 @@ from app.models.user import User
 
 
 class TestRegister:
-    """Test user registration endpoint."""
+    """User registration tests."""
 
     def test_register_success(self, client):
         """Test successful user registration."""
@@ -106,7 +106,7 @@ class TestRegister:
 
 
 class TestLogin:
-    """Test user login endpoint."""
+    """User login tests."""
 
     def test_login_success(self, client, test_user):
         """Test successful login with valid credentials."""
@@ -177,7 +177,7 @@ class TestLogin:
 
 
 class TestGetCurrentUser:
-    """Test get current user endpoint."""
+    """Current user retrieval tests."""
 
     def test_get_current_user_success(self, client, auth_headers):
         """Test getting current user with valid token."""
@@ -261,7 +261,7 @@ class TestGetCurrentUser:
 
 
 class TestHealthCheck:
-    """Test health check endpoint."""
+    """Health check tests."""
 
     def test_health_check(self, client):
         """Test health check endpoint returns healthy status."""
@@ -271,7 +271,7 @@ class TestHealthCheck:
 
 
 class TestTokenExpiration:
-    """Test custom token expiration scenarios."""
+    """Token expiration tests."""
 
     def test_create_token_with_custom_expiration(self, test_user):
         """Test creating a token with custom expiration time."""

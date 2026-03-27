@@ -9,7 +9,7 @@ from app.services import email_service
 
 
 class TestEmailConfiguration:
-    """Test email configuration detection."""
+    """Configuration detection tests."""
 
     @patch("app.services.email_service.settings")
     def test_is_email_configured_with_settings(self, mock_settings):
@@ -45,7 +45,7 @@ class TestEmailConfiguration:
 
 
 class TestEmailSending:
-    """Test email sending functionality."""
+    """Email sending tests."""
 
     @pytest.mark.asyncio
     @patch("app.services.email_service.is_email_configured")
@@ -247,7 +247,7 @@ class TestEmailSending:
 
 
 class TestEmailContent:
-    """Test email content and formatting."""
+    """Content formatting tests."""
 
     @pytest.mark.asyncio
     @patch("app.services.email_service.is_email_configured")
@@ -357,7 +357,7 @@ class TestEmailContent:
 
 
 class TestTestEmail:
-    """Test the send_test_email function."""
+    """Test email tests."""
 
     @pytest.mark.asyncio
     @patch("app.services.email_service.send_email")

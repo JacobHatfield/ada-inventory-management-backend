@@ -16,7 +16,7 @@ from app.utils.pagination import (
 
 
 class TestCalculateTotalPages:
-    """Test calculate_total_pages function."""
+    """Total pages calculation tests."""
 
     def test_calculate_with_exact_divisible_count(self):
         """Test when total count is exactly divisible by page size."""
@@ -55,7 +55,7 @@ class TestCalculateTotalPages:
 
 
 class TestPageToOffset:
-    """Test page_to_offset function."""
+    """Page to offset conversion tests."""
 
     def test_first_page_conversion(self):
         """Test converting first page to offset."""
@@ -98,7 +98,7 @@ class TestPageToOffset:
 
 
 class TestOffsetToPage:
-    """Test offset_to_page function."""
+    """Offset to page conversion tests."""
 
     def test_zero_offset_conversion(self):
         """Test converting zero offset to page number."""
@@ -147,7 +147,7 @@ class TestOffsetToPage:
 
 
 class TestGetPaginationParams:
-    """Test get_pagination_params function."""
+    """Pagination parameter tests."""
 
     def test_with_page_only(self):
         """Test pagination using page parameter (1-indexed)."""
@@ -224,7 +224,7 @@ class TestGetPaginationParams:
 
 
 class TestPaginatedResponse:
-    """Test PaginatedResponse schema."""
+    """Paginated response schema tests."""
 
     def test_create_paginated_response_with_items(self):
         """Test creating a paginated response with typed items."""

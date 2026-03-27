@@ -86,7 +86,7 @@ def create_password_reset_token(db: Session, user_id: int) -> PasswordResetToken
 
 
 def verify_reset_token(db: Session, token: str) -> Optional[PasswordResetToken]:
-    """Verify a password reset token is valid and not expired."""
+    """Verify a password reset token."""
     reset_token = (
         db.query(PasswordResetToken)
         .filter(

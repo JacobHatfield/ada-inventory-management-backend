@@ -84,7 +84,7 @@ class PasswordResetConfirm(BaseModel):
     @field_validator("new_password")
     @classmethod
     def validate_password_strength(cls, v: str) -> str:
-        """Validate password meets security requirements."""
+        """Validate password strength."""
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters long")
         if not re.search(r"[A-Z]", v):

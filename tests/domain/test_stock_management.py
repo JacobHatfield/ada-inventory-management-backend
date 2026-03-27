@@ -2,7 +2,7 @@ from app.services import inventory_service
 
 
 class TestStockIncrement:
-    """Test stock increment business logic."""
+    """Stock increment business logic tests."""
 
     def test_increment_stock_increases_quantity(
         self, db, test_user, test_inventory_item
@@ -57,7 +57,7 @@ class TestStockIncrement:
 
 
 class TestStockDecrement:
-    """Test stock decrement business logic."""
+    """Stock decrement business logic tests."""
 
     def test_decrement_stock_decreases_quantity(
         self, db, test_user, test_inventory_item
@@ -117,7 +117,7 @@ class TestStockDecrement:
 
 
 class TestNegativeStockPrevention:
-    """Test the critical business rule: prevent negative stock."""
+    """Negative stock prevention tests."""
 
     def test_prevent_negative_stock_basic(self, db, test_user, test_inventory_item):
         """Test that stock cannot go negative."""
@@ -186,7 +186,7 @@ class TestNegativeStockPrevention:
 
 
 class TestLowStockDetection:
-    """Test low stock threshold detection logic."""
+    """Low stock threshold detection tests."""
 
     def test_is_low_stock_below_threshold(self, db, test_user):
         """Test item is flagged as low stock when below threshold."""
@@ -270,7 +270,7 @@ class TestLowStockDetection:
 
 
 class TestLowStockThresholdChanges:
-    """Test how stock status changes relative to threshold."""
+    """Stock status transition tests."""
 
     def test_decrement_triggers_low_stock_status(
         self, db, test_user, test_inventory_item
@@ -314,7 +314,7 @@ class TestLowStockThresholdChanges:
 
 
 class TestStockOwnershipValidation:
-    """Test that stock operations respect user ownership."""
+    """Stock ownership validation tests."""
 
     def test_cannot_adjust_other_user_item(
         self, db, test_user, other_user, test_inventory_item
@@ -348,7 +348,7 @@ class TestStockOwnershipValidation:
 
 
 class TestStockReasonTracking:
-    """Test optional reason parameter for stock adjustments."""
+    """Stock reason tracking tests."""
 
     def test_adjust_with_reason(self, db, test_user, test_inventory_item):
         """Test that stock can be adjusted with a reason provided."""
@@ -378,7 +378,7 @@ class TestStockReasonTracking:
 
 
 class TestStockEdgeCases:
-    """Test edge cases and boundary conditions."""
+    """Stock edge case tests."""
 
     def test_adjust_stock_with_zero_initial_quantity(self, db, test_user):
         """Test adjusting stock for item with zero initial quantity."""

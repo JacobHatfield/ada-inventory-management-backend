@@ -6,7 +6,7 @@ from app.services import user_service
 
 
 class TestGetUserProfile:
-    """Tests for retrieving user profile data."""
+    """User profile retrieval tests."""
 
     def test_get_user_profile_returns_all_fields(self, db, test_user):
         """Return complete user profile with all fields."""
@@ -26,7 +26,7 @@ class TestGetUserProfile:
 
 
 class TestUpdateUserProfile:
-    """Tests for updating user profile information."""
+    """User profile update tests."""
 
     def test_update_user_profile_email_only(self, db, test_user):
         """Update only email field."""
@@ -89,7 +89,7 @@ class TestUpdateUserProfile:
 
 
 class TestValidateEmailUniqueness:
-    """Tests for email uniqueness validation."""
+    """Email uniqueness validation tests."""
 
     def test_validate_email_uniqueness_available(self, db):
         """Return True when email is not taken."""
@@ -112,7 +112,7 @@ class TestValidateEmailUniqueness:
 
 
 class TestProfileEdgeCases:
-    """Tests for edge cases and data validation."""
+    """Profile edge case tests."""
 
     def test_update_profile_with_empty_strings(self, db, test_user):
         """Allow empty strings for optional fields."""

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 async def check_and_notify_low_stock(db: Session, user_id: int) -> dict:
-    """Check all items for a user and send low stock alerts if needed."""
+    """Check for low stock and send alerts."""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         logger.error(f"User {user_id} not found for low stock check")
@@ -22,7 +22,7 @@ async def check_and_notify_low_stock(db: Session, user_id: int) -> dict:
 
 
 async def notify_user_low_stock(db: Session, user: User) -> dict:
-    """Send low stock notifications to a specific user."""
+    """Send low stock notifications to a user."""
     low_stock_items = inventory_service.get_low_stock_items(db, user.id)
 
     if not low_stock_items:
@@ -101,7 +101,7 @@ async def notify_user_low_stock(db: Session, user: User) -> dict:
 
 
 async def check_and_notify_all_users(db: Session) -> dict:
-    """Check and notify all active users about their low stock items."""
+    """Check and notify all users about low stock."""
     users = db.query(User).filter(User.is_active.is_(True)).all()
 
     results = {

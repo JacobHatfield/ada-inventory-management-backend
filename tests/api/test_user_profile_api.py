@@ -4,7 +4,7 @@ from fastapi import status
 
 
 class TestGetProfileAPI:
-    """Tests for GET /api/v1/users/me/profile endpoint."""
+    """Profile retrieval tests."""
 
     def test_get_profile_success(self, client, auth_headers):
         """Return current user's profile with all fields."""
@@ -37,7 +37,7 @@ class TestGetProfileAPI:
 
 
 class TestUpdateProfileAPI:
-    """Tests for PUT /api/v1/users/me/profile endpoint."""
+    """Profile update tests."""
 
     def test_update_profile_email_success(self, client, auth_headers, db, test_user):
         """Update only email field."""
@@ -155,7 +155,7 @@ class TestUpdateProfileAPI:
 
 
 class TestProfileIntegration:
-    """Integration tests for profile management."""
+    """Profile integration tests."""
 
     def test_profile_changes_reflected_get_profile(
         self, client, auth_headers, db, test_user

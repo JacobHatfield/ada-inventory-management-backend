@@ -15,6 +15,7 @@ router = APIRouter(prefix="/email", tags=["email"])
 async def send_test_email_endpoint(
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
+    """Send a test email to the current user."""
     # Send a test email to the authenticated user to verify email configuration
     if not email_service.is_email_configured():
         raise HTTPException(

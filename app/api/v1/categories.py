@@ -41,7 +41,7 @@ def get_categories(
     skip: int = Query(0, ge=0, description="Number of items to skip"),
     limit: int = Query(100, ge=1, le=100, description="Number of items per page"),
 ):
-    """Get all categories for the authenticated user with pagination metadata."""
+    """Get categories for the current user."""
     # Get pagination parameters (supports both page/page_size and skip/limit)
     offset, final_page_size = get_pagination_params(
         page=page, skip=skip, limit=limit, page_size=page_size
@@ -107,7 +107,7 @@ def delete_category(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
-    """Delete a category. Will fail if category has associated inventory items."""
+    """Delete a category."""
     try:
         success = category_service.delete_category(db, category_id, current_user.id)
         if not success:

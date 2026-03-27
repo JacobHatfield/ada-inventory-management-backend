@@ -39,7 +39,7 @@ def get_audit_logs_for_item(
     skip: int = 0,
     limit: int = 100,
 ) -> List[AuditLog]:
-    """Get paginated audit logs for an item, sorted by newest first."""
+    """Get audit logs for an item."""
     return (
         db.query(AuditLog)
         .filter(AuditLog.inventory_item_id == inventory_item_id)
@@ -68,7 +68,7 @@ def get_audit_logs_for_user(
     skip: int = 0,
     limit: int = 100,
 ) -> List[AuditLog]:
-    """Get paginated audit logs created by a user, sorted by newest first."""
+    """Get audit logs for a user."""
     return (
         db.query(AuditLog)
         .filter(AuditLog.user_id == user_id)

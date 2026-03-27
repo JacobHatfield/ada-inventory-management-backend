@@ -8,7 +8,7 @@ from app.services import email_service
 
 
 class TestSpecializedEmails:
-    """Test specialized email functions like password reset and alerts."""
+    """Specialized email tests."""
 
     @pytest.mark.asyncio
     @patch("app.services.email_service.is_email_configured")

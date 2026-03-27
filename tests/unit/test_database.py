@@ -4,7 +4,7 @@ from app.database import get_db
 
 
 class TestDatabase:
-    """Test database utility functions."""
+    """Database utility tests."""
 
     def test_get_db_yields_session(self):
         """Test get_db yields a database session and closes it."""

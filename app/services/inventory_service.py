@@ -100,7 +100,7 @@ def get_user_inventory_items_count(
     search: Optional[str] = None,
     stock_status: Optional[str] = None,
 ) -> int:
-    """Get total count of inventory items for a user with filters applied."""
+    """Get total count of inventory items with filters."""
     query = _build_inventory_query(db, user_id, category_id, search, stock_status)
     return query.count()
 
@@ -116,7 +116,7 @@ def get_user_inventory_items(
     sort_by: str = "created_at",
     sort_order: str = "desc",
 ) -> List[InventoryItem]:
-    """Get all inventory items for a user with optional search, filters, and sorting."""
+    """Get inventory items with filters and sorting."""
     query = _build_inventory_query(db, user_id, category_id, search, stock_status)
 
     # Apply sorting
@@ -184,7 +184,7 @@ def adjust_stock_quantity(
     user_id: int,
     reason: Optional[str] = None,
 ) -> Optional[InventoryItem]:
-    """Adjust inventory item quantity, preventing negative stock. Returns None if item not found, raises ValueError if would result in negative quantity."""
+    """Adjust inventory item quantity."""
     # Get item with ownership verification
     db_item = get_inventory_item_by_id(db, item_id, user_id)
     if not db_item:
@@ -270,7 +270,7 @@ def check_low_stock(item: InventoryItem) -> bool:
 
 
 def get_low_stock_items(db: Session, user_id: int) -> List[InventoryItem]:
-    """Get all inventory items that are at or below their low stock threshold."""
+    """Get items at or below low stock threshold."""
     return (
         db.query(InventoryItem)
         .filter(

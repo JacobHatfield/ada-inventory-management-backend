@@ -10,7 +10,7 @@ from app.services import auth_service
 
 
 class TestForgotPasswordEndpoint:
-    """Test forgot password endpoint."""
+    """Password reset request tests."""
 
     @patch("app.api.v1.auth.email_service.send_password_reset_email")
     def test_forgot_password_with_valid_email(
@@ -70,7 +70,7 @@ class TestForgotPasswordEndpoint:
 
 
 class TestResetPasswordEndpoint:
-    """Test reset password endpoint."""
+    """Password reset completion tests."""
 
     def test_reset_password_with_valid_token(self, client, db, test_user):
         """Test password reset with valid token succeeds."""
@@ -204,7 +204,7 @@ class TestResetPasswordEndpoint:
 
 
 class TestVerifyResetTokenEndpoint:
-    """Test verify reset token endpoint."""
+    """Token verification tests."""
 
     def test_verify_reset_token_with_valid_token(self, client, db, test_user):
         """Test verifying a valid reset token returns success."""
@@ -235,7 +235,7 @@ class TestVerifyResetTokenEndpoint:
 
 
 class TestPasswordResetWorkflowIntegration:
-    """Test complete password reset workflow end-to-end."""
+    """Workflow integration tests."""
 
     @patch("app.api.v1.auth.email_service.send_password_reset_email")
     @patch("app.api.v1.auth.email_service.send_password_reset_confirmation_email")
@@ -353,7 +353,7 @@ class TestPasswordResetWorkflowIntegration:
 
 
 class TestPasswordResetSecurityAndEdgeCases:
-    """Test security edge cases and boundary conditions."""
+    """Security and edge case tests."""
 
     def test_reset_password_with_very_long_password(self, client, db, test_user):
         """Test password reset accepts reasonably long passwords."""

@@ -84,11 +84,7 @@ async def forgot_password(
     request: PasswordResetRequest,
     db: Annotated[Session, Depends(get_db)],
 ):
-    """
-    Request a password reset email.
-
-    Always returns success even if email doesn't exist (security best practice).
-    """
+    """Request a password reset email."""
     # Check if user exists
     user = get_user_by_email(db, request.email)
 
@@ -120,9 +116,7 @@ async def reset_password(
     request: PasswordResetConfirm,
     db: Annotated[Session, Depends(get_db)],
 ):
-    """
-    Reset password using a valid reset token.
-    """
+    """Reset password using a token."""
     # Attempt to reset password
     user = reset_user_password(db, request.token, request.new_password)
 
@@ -145,9 +139,7 @@ async def verify_reset_token_endpoint(
     token: str,
     db: Annotated[Session, Depends(get_db)],
 ):
-    """
-    Verify if a password reset token is valid (for frontend validation).
-    """
+    """Verify a password reset token."""
     reset_token = verify_reset_token(db, token)
 
     if not reset_token:

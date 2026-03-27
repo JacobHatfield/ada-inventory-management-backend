@@ -8,7 +8,7 @@ from app.schemas.inventory import StockUpdate
 
 
 class TestInventoryModel:
-    """Test InventoryItem model properties."""
+    """Model property tests."""
 
     def test_is_low_stock_with_none_threshold(self, db, test_user):
         """Test is_low_stock property when threshold is explicitly None."""
@@ -77,7 +77,7 @@ class TestInventoryModel:
 
 
 class TestStockUpdateSchema:
-    """Test StockUpdate schema validators."""
+    """Schema validation tests."""
 
     def test_validate_quantity_change_zero(self):
         """Test that quantity_change cannot be zero."""

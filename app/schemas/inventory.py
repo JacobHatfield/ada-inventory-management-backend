@@ -66,7 +66,7 @@ class InventoryItemResponse(InventoryItemBase):
     @computed_field
     @property
     def is_low_stock(self) -> bool:
-        """Check if item is at or below low stock threshold."""
+        """Check if item is low stock."""
         if self.low_stock_threshold is None:
             return False
         return self.quantity <= self.low_stock_threshold
@@ -74,7 +74,7 @@ class InventoryItemResponse(InventoryItemBase):
     @computed_field
     @property
     def stock_status(self) -> Literal["out_of_stock", "critical", "low", "healthy"]:
-        """Determine stock status based on quantity and threshold."""
+        """Determine stock status."""
         if self.quantity == 0:
             return "out_of_stock"
 

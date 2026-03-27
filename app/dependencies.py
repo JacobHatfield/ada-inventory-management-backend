@@ -21,7 +21,7 @@ async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
     db: Annotated[Session, Depends(get_db)],
 ) -> User:
-    """Get the current authenticated user from JWT token."""
+    """Get the current authenticated user."""
     if credentials is None:
         raise credentials_exception
 
@@ -43,7 +43,7 @@ async def get_current_user(
 async def get_current_active_user(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> User:
-    """Get the current authenticated user and verify they are active."""
+    """Get the current active user."""
     if not current_user.is_active:
         raise inactive_user_exception
 

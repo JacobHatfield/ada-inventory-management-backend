@@ -6,7 +6,7 @@ from app.services import inventory_service
 
 
 class TestInventoryServiceValidation:
-    """Test service-layer validation for inventory operations."""
+    """Service validation tests."""
 
     def test_create_item_service_validates_negative_quantity(self, db, test_user):
         """Test that service layer catches negative quantity in create."""
@@ -46,7 +46,7 @@ class TestInventoryServiceValidation:
 
 
 class TestAdjustStockQuantity:
-    """Test stock quantity adjustment functionality."""
+    """Adjustment functionality tests."""
 
     def test_increment_stock_successfully(self, db, test_user, test_inventory_item):
         """Test successfully incrementing stock quantity."""

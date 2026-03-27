@@ -1,13 +1,4 @@
-"""
-Application configuration
-- Settings class using pydantic-settings
-- Environment variables
-- Database configuration
-- JWT configuration
-- CORS configuration
-- Rate limiting configuration
-- Email configuration (optional)
-"""
+"""Application configuration."""
 
 from typing import Union
 
@@ -64,7 +55,7 @@ class Settings(BaseSettings):
     def assemble_cors_origins(
         cls, v: Union[str, list[str], None]
     ) -> Union[str, list[str]]:
-        """Validate and parse CORS origins from string, list, or JSON string"""
+        """Validate and parse CORS origins."""
         if v is None:
             return []
         if isinstance(v, str) and not v.startswith("["):
@@ -96,10 +87,12 @@ class Settings(BaseSettings):
                 v = v.replace("postgresql", "postgresql+psycopg", 1)
         return v
 
-    @field_validator("SENDGRID_API_KEY", "SMTP_FROM_EMAIL", "FRONTEND_URL", mode="before")
+    @field_validator(
+        "SENDGRID_API_KEY", "SMTP_FROM_EMAIL", "FRONTEND_URL", mode="before"
+    )
     @classmethod
     def strip_whitespace(cls, v: str) -> str:
-        """Strip whitespace and quotes from critical strings to prevent copy-paste errors"""
+        """Strip whitespace and quotes from critical strings."""
         if isinstance(v, str):
             # Strip whitespace then strip both single and double quotes
             return v.strip().strip("'").strip('"')
@@ -107,7 +100,7 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> list[str]:
-        """Convert BACKEND_CORS_ORIGINS to a clean list of strings (stripping trailing slashes)"""
+        """Convert BACKEND_CORS_ORIGINS to a clean list of strings."""
         origins = self.BACKEND_CORS_ORIGINS
         if isinstance(origins, str):
             if origins == "*":

@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 async def check_low_stock_background(user_id: int):
-    """Background task to check low stock alerts with its own database session."""
+    """Background task to check low stock alerts."""
     db = SessionLocal()
     try:
         await alert_service.check_and_notify_low_stock(db, user_id)
@@ -81,7 +81,7 @@ def get_inventory_items(
     ),
     sort_order: Literal["asc", "desc"] = Query("desc", description="Sort order"),
 ):
-    """Get all inventory items with pagination, search, filters, and sorting."""
+    """Get inventory items with filters and pagination."""
     # Get pagination parameters (supports both page/page_size and skip/limit)
     offset, final_page_size = get_pagination_params(
         page=page, skip=skip, limit=limit, page_size=page_size
@@ -123,7 +123,7 @@ def get_low_stock_items(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
-    """Get all inventory items that are at or below their low stock threshold."""
+    """Get items at or below low stock threshold."""
     items = inventory_service.get_low_stock_items(db, current_user.id)
     return items
 
@@ -136,7 +136,7 @@ def get_critical_stock_items(
         0.5, ge=0, le=1, description="Critical threshold percentage (default 0.5 = 50%)"
     ),
 ):
-    """Get inventory items that are critically low (below threshold percentage)."""
+    """Get critically low inventory items."""
     items = inventory_service.get_critical_stock_items(
         db, current_user.id, threshold_percentage
     )
@@ -195,7 +195,7 @@ async def check_low_stock_alerts(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
-    """Manually trigger low stock alert check and send notifications if needed."""
+    """Manually trigger low stock alert check."""
     result = await alert_service.check_and_notify_low_stock(db, current_user.id)
 
     if not result["success"]:
@@ -353,7 +353,7 @@ def get_item_audit_history(
     skip: int = Query(0, ge=0, description="Number of items to skip (offset)"),
     limit: int = Query(100, ge=1, le=100, description="Maximum items per page"),
 ):
-    """Get audit history for an inventory item with pagination."""
+    """Get audit history for an inventory item."""
     # Verify item exists and user owns it
     item = inventory_service.get_inventory_item_by_id(db, item_id, current_user.id)
     if not item:

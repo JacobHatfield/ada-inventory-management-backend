@@ -1,7 +1,4 @@
-"""
-Tests for exception handlers in inventory API endpoints.
-These tests mock the service layer to trigger exception handling in the API layer.
-"""
+"""Inventory API exception handler tests."""
 
 from unittest.mock import patch
 
@@ -12,7 +9,7 @@ from app.models.user import User
 
 
 class TestInventoryAPIExceptionHandlers:
-    """Test exception handlers in inventory API layer."""
+    """Inventory API exception handler tests."""
 
     @patch("app.api.v1.inventory.inventory_service.create_inventory_item")
     def test_create_item_service_raises_value_error(

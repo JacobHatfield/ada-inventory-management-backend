@@ -1,10 +1,4 @@
-"""
-Database configuration and session management
-- SQLAlchemy engine setup
-- Session factory
-- Database connection
-- Base model class
-"""
+"""Database configuration and session management."""
 
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -27,10 +21,7 @@ Base = declarative_base()
 
 
 def get_db():
-    """
-    Dependency function to get database session.
-    Yields a database session and ensures it's closed after use.
-    """
+    """Dependency to get database session."""
     db = SessionLocal()
     try:
         yield db

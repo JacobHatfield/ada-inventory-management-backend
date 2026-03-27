@@ -8,7 +8,7 @@ from app.models.inventory import InventoryItem
 
 
 class TestLowStockItemsAPI:
-    """Tests for the low stock items endpoint."""
+    """Low stock alerts retrieval tests."""
 
     def test_get_low_stock_items_returns_sorted(
         self, client, auth_headers, db, test_user, other_user
@@ -66,7 +66,7 @@ class TestLowStockItemsAPI:
 
 
 class TestCriticalStockItemsAPI:
-    """Tests for the critical stock items endpoint."""
+    """Critical stock alerts retrieval tests."""
 
     def test_get_critical_stock_items_default_percentage(
         self, client, auth_headers, db, test_user
@@ -138,7 +138,7 @@ class TestCriticalStockItemsAPI:
 
 
 class TestStockSummaryAPI:
-    """Tests for the stock summary endpoint."""
+    """Stock summary tests."""
 
     def test_get_stock_summary_counts(self, client, auth_headers, db, test_user):
         """Return counts for each stock status bucket."""
@@ -194,7 +194,7 @@ class TestStockSummaryAPI:
 
 
 class TestAlertCheckAPI:
-    """Tests for the alert check endpoint."""
+    """Alert check tests."""
 
     def test_check_alerts_success(self, client, auth_headers):
         """Return alert check results on success."""

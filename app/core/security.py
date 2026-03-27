@@ -15,7 +15,7 @@ pwd_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
-    """Hash a plain text password using bcrypt."""
+    """Hash a plain text password."""
     return pwd_context.hash(password)
 
 
@@ -25,7 +25,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(user_id: int, expires_delta: Optional[timedelta] = None) -> str:
-    """Create a JWT access token for a user."""
+    """Create a JWT access token."""
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:

@@ -152,7 +152,7 @@ async def send_password_reset_email(
     reset_token: str,
     frontend_url: Optional[str] = None,
 ) -> bool:
-    """Send password reset email with reset link."""
+    """Send password reset email."""
     if frontend_url is None:
         frontend_url = settings.FRONTEND_URL
 
@@ -223,7 +223,7 @@ Inventory Management Team
 
 
 async def send_password_reset_confirmation_email(to_email: str) -> bool:
-    """Send confirmation email after successful password reset."""
+    """Send password reset confirmation email."""
     if not is_email_configured():
         logger.warning("Email not configured. Skipping confirmation email.")
         return False
@@ -272,7 +272,7 @@ Inventory Management Team
 async def send_low_stock_alert_email(
     to_email: str, items: list[dict], frontend_url: Optional[str] = None
 ) -> bool:
-    """Send low stock alert email with list of items needing restocking."""
+    """Send low stock alert email."""
     if frontend_url is None:
         frontend_url = settings.FRONTEND_URL
 
@@ -365,7 +365,7 @@ Inventory Management Team
 async def send_critical_stock_alert_email(
     to_email: str, items: list[dict], frontend_url: Optional[str] = None
 ) -> bool:
-    """Send critical stock alert email for items at critically low levels."""
+    """Send critical stock alert email."""
     if frontend_url is None:
         frontend_url = settings.FRONTEND_URL
 

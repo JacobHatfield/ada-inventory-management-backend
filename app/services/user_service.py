@@ -9,7 +9,7 @@ def get_user_profile(db: Session, user_id: int) -> User:
 
 
 def validate_email_uniqueness(db: Session, email: str, current_user_id: int) -> bool:
-    """Check if email is unique (True if available, False if taken by another user)."""
+    """Check if email is unique."""
     existing_user = db.query(User).filter(User.email == email).first()
 
     if existing_user is None:
@@ -29,7 +29,7 @@ def update_user_profile(
     full_name: str = None,
     profile_image_url: str = None,
 ) -> User:
-    """Update user profile (email, name, image) with email conflict detection."""
+    """Update user profile."""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise ValueError(f"User {user_id} not found")

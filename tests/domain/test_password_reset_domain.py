@@ -14,7 +14,7 @@ from app.services.auth_service import (
 
 
 class TestGenerateResetToken:
-    """Test reset token generation."""
+    """Token generation tests."""
 
     def test_generate_reset_token_creates_string(self):
         """Test that generate_reset_token returns a string."""
@@ -37,7 +37,7 @@ class TestGenerateResetToken:
 
 
 class TestCreatePasswordResetToken:
-    """Test password reset token creation."""
+    """Token creation tests."""
 
     def test_create_password_reset_token(self, db, test_user):
         """Test creating a password reset token for a user."""
@@ -124,7 +124,7 @@ class TestCreatePasswordResetToken:
 
 
 class TestVerifyResetToken:
-    """Test password reset token verification."""
+    """Token verification tests."""
 
     def test_verify_reset_token_with_valid_token(self, db, test_user):
         """Test verifying a valid, unexpired token."""
@@ -196,7 +196,7 @@ class TestVerifyResetToken:
 
 
 class TestResetUserPassword:
-    """Test password reset functionality."""
+    """Password reset tests."""
 
     def test_reset_user_password_success(self, db, test_user):
         """Test successfully resetting a user's password."""
@@ -309,7 +309,7 @@ class TestResetUserPassword:
 
 
 class TestPasswordResetTokenExpiry:
-    """Test token expiry edge cases and timing."""
+    """Token expiry tests."""
 
     def test_token_expires_after_one_hour(self, db, test_user):
         """Test that token expiry is set to 1 hour from creation."""
@@ -340,7 +340,7 @@ class TestPasswordResetTokenExpiry:
 
 
 class TestPasswordResetTokenInvalidation:
-    """Test token invalidation scenarios."""
+    """Token invalidation tests."""
 
     def test_new_token_invalidates_all_previous_unused_tokens(self, db, test_user):
         """Test that only the newest token is valid."""
