@@ -9,9 +9,10 @@ Application configuration
 - Email configuration (optional)
 """
 
-from pydantic import field_validator, AnyHttpUrl
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Union
+
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -28,7 +29,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # CORS Configuration
-    BACKEND_CORS_ORIGINS: Union[str, list[str]] = "http://localhost:5173,http://127.0.0.1:5173"
+    BACKEND_CORS_ORIGINS: Union[str, list[str]] = (
+        "http://localhost:5173,http://127.0.0.1:5173"
+    )
 
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 60
@@ -53,12 +56,14 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=True,
-        extra="ignore"  # Ignore extra environment variables to prevent validation errors
+        extra="ignore",  # Ignore extra environment variables to prevent validation errors
     )
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
-    def assemble_cors_origins(cls, v: Union[str, list[str], None]) -> Union[str, list[str]]:
+    def assemble_cors_origins(
+        cls, v: Union[str, list[str], None]
+    ) -> Union[str, list[str]]:
         """Validate and parse CORS origins from string, list, or JSON string"""
         if v is None:
             return []
@@ -68,6 +73,7 @@ class Settings(BaseSettings):
             return v
         if isinstance(v, str) and v.startswith("["):
             import json
+
             try:
                 return json.loads(v)
             except Exception:
@@ -98,7 +104,7 @@ class Settings(BaseSettings):
             if origins == "*":
                 return ["*"]
             return [origins.strip().rstrip("/")]
-        
+
         # Handle case where list elements might be Pydantic URL objects or strings
         return [str(origin).strip().rstrip("/") for origin in origins]
 
