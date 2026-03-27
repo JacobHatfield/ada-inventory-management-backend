@@ -193,7 +193,7 @@ Inventory Management Team
             display: inline-block; 
             padding: 12px 24px; 
             background-color: #4F46E5; 
-            color: white; 
+            color: #ffffff !important; 
             text-decoration: none; 
             border-radius: 5px; 
             margin: 20px 0;
@@ -206,7 +206,7 @@ Inventory Management Team
         <h2>Password Reset Request</h2>
         <p>You requested to reset your password for the Inventory Management System.</p>
         <p>Click the button below to reset your password:</p>
-        <a href="{reset_link}" class="button">Reset Password</a>
+        <a href="{reset_link}" class="button" style="color: #ffffff !important;">Reset Password</a>
         <p>Or copy and paste this link into your browser:</p>
         <p style="word-break: break-all; color: #666;">{reset_link}</p>
         <p><strong>This link will expire in 1 hour.</strong></p>
@@ -326,7 +326,7 @@ Inventory Management Team
         .alert {{ background-color: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; margin: 20px 0; }}
         table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
         th {{ background-color: #F59E0B; color: white; padding: 12px; text-align: left; }}
-        .btn {{ display: inline-block; padding: 12px 24px; background-color: #F59E0B; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+        .btn {{ display: inline-block; padding: 12px 24px; background-color: #F59E0B; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
         .footer {{ margin-top: 30px; font-size: 12px; color: #666; }}
     </style>
 </head>
@@ -349,7 +349,7 @@ Inventory Management Team
 {items_html}
             </tbody>
         </table>
-        <a href="{frontend_url}/inventory?filter=low_stock" class="btn">View Inventory</a>
+        <a href="{frontend_url}/inventory?filter=low_stock" class="btn" style="color: #ffffff !important;">View Inventory</a>
         <div class="footer">
             <p>This is an automated alert. Please restock these items to maintain optimal inventory levels.</p>
             <p>Best regards,<br>Inventory Management Team</p>
@@ -419,7 +419,7 @@ Inventory Management Team
         .critical-alert {{ background-color: #FEE2E2; border-left: 4px solid #DC2626; padding: 15px; margin: 20px 0; }}
         table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
         th {{ background-color: #DC2626; color: white; padding: 12px; text-align: left; }}
-        .btn {{ display: inline-block; padding: 12px 24px; background-color: #DC2626; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+        .btn {{ display: inline-block; padding: 12px 24px; background-color: #DC2626; color: #ffffff !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
         .footer {{ margin-top: 30px; font-size: 12px; color: #666; }}
         .urgent {{ color: #DC2626; font-weight: bold; font-size: 18px; }}
     </style>
@@ -444,7 +444,7 @@ Inventory Management Team
 {items_html}
             </tbody>
         </table>
-        <a href="{frontend_url}/inventory?filter=critical_stock" class="btn">Restock Now</a>
+        <a href="{frontend_url}/inventory?filter=critical_stock" class="btn" style="color: #ffffff !important;">Restock Now</a>
         <div class="footer">
             <p style="color: #DC2626; font-weight: bold;">These items require immediate attention to prevent stockouts.</p>
             <p>Best regards,<br>Inventory Management Team</p>

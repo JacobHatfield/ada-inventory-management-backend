@@ -31,51 +31,6 @@ from app.services.auth_service import (
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@router.get("/email-status")
-async def get_email_status():
-    """
-    Check if email service is configured and show environment variables (for debugging).
-    """
-    from sendgrid import SendGridAPIClient
-    from sendgrid.helpers.mail import Mail
-
-    from app.core.config import settings
-    from app.services.email_service import HAS_SENDGRID, is_email_configured
-
-    import os
-    status = {
-        "is_configured": is_email_configured(),
-        "api_key_set": bool(settings.SENDGRID_API_KEY),
-        "from_email": settings.SMTP_FROM_EMAIL,
-        "frontend_url_in_settings": settings.FRONTEND_URL,
-        "frontend_url_in_os_environ": os.environ.get("FRONTEND_URL"),
-        "last_error": None,
-    }
-
-    if is_email_configured():
-        try:
-            sg = SendGridAPIClient(settings.SENDGRID_API_KEY)
-            message = Mail(
-                from_email=settings.SMTP_FROM_EMAIL,
-                to_emails="test@example.com",
-                subject="Diagnostic Test",
-                plain_text_content="This is a diagnostic test.",
-            )
-            response = sg.send(message)
-            status["response_code"] = response.status_code
-            if response.status_code >= 400:
-                status["last_error"] = str(response.body)
-        except Exception as e:
-            status["last_error"] = str(e)
-            try:
-                if hasattr(e, 'body'):
-                    status["error_body"] = str(e.body)
-            except:
-                pass
-
-    return status
-
-
 @router.post(
     "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
 )
