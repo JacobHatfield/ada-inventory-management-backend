@@ -25,6 +25,10 @@ services:
         value: HS256
       - key: BACKEND_CORS_ORIGINS
         value: "*" # Update this with your frontend URL later
+      - key: SENDGRID_API_KEY
+        sync: false # Set this in the Render dashboard
+      - key: SMTP_FROM_EMAIL
+        sync: false # Must be a verified sender in SendGrid
 
 databases:
   - name: inventory-db
