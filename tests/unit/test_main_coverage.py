@@ -12,7 +12,9 @@ import app.main
 def test_migration_ini_missing():
     """Test the 'else' branch when alembic.ini is not found."""
     # Mock os.path.exists to return False for the alembic.ini path
-    with patch("os.path.exists", side_effect=lambda p: False if "alembic.ini" in p else True):
+    with patch(
+        "os.path.exists", side_effect=lambda p: False if "alembic.ini" in p else True
+    ):
         # Re-import main to trigger the startup logic with mocks
         # We use a try/except because reloading might cause minor FastAPI side effects
         try:
@@ -32,6 +34,7 @@ def test_migration_fail_except():
                 importlib.reload(app.main)
             except Exception:
                 pass
+
 
 # The endpoints are already covered by API tests, so we don't need redundant client tests here
 # that might conflict with module reloading.
